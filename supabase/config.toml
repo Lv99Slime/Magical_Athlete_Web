@@ -1,0 +1,9 @@
+project_id = "magical-athlete"
+
+[auth]
+enabled = true
+enable_anonymous_sign_ins = true
+
+[functions.game]
+# Handler verifies bearer JWT with Auth.getUser; supports modern asymmetric keys.
+verify_jwt = false

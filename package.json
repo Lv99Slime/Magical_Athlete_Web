@@ -1,1 +1,47 @@
-{"name":"magical-athlete","private":true,"version":"0.1.0","type":"module","workspaces":["packages/*","apps/*"],"scripts":{"dev":"vite --config apps/web/vite.config.ts","build":"vite build --config apps/web/vite.config.ts","typecheck":"tsc --noEmit","test":"vitest run","test:watch":"vitest","lint":"eslint .","test:e2e":"playwright test"},"dependencies":{"@supabase/supabase-js":"^2.57.4","react":"^19.1.1","react-dom":"^19.1.1","zod":"^4.1.11"},"devDependencies":{"@eslint/js":"^9.36.0","@playwright/test":"^1.55.1","@types/node":"^24.5.2","@types/react":"^19.1.16","@types/react-dom":"^19.1.9","@vitejs/plugin-react":"^5.0.3","eslint":"^9.36.0","typescript-eslint":"^8.44.1","fast-check":"^4.3.0","typescript":"^5.9.2","vite":"^7.1.7","vitest":"^3.2.4"}}
+{
+  "name": "magical-athlete",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "vite --config apps/web/vite.config.ts",
+    "build": "vite build --config apps/web/vite.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "test:e2e": "playwright test",
+    "backend:bundle": "node supabase/scripts/bundle-engine.mjs",
+    "test:backend": "vitest run tests/backend",
+    "test:backend:ci": "node supabase/scripts/ci-backend.mjs",
+    "test:production": "playwright test --config playwright.production.config.ts",
+    "test:online": "playwright test --config playwright.online.config.ts",
+    "format": "prettier --write packages apps tests scripts supabase/scripts *.ts *.js package.json"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "@playwright/test": "^1.55.1",
+    "@types/node": "^24.5.2",
+    "@types/react": "^19.1.16",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.3",
+    "esbuild": "^0.28.2",
+    "eslint": "^9.36.0",
+    "fast-check": "^4.3.0",
+    "prettier": "^3.9.9",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.44.1",
+    "vite": "^7.1.7",
+    "vitest": "^4.1.11"
+  }
+}

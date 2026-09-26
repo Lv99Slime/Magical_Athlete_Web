@@ -1,1 +1,9 @@
-{"name":"@magical/web","version":"0.1.0","private":true,"type":"module","dependencies":{"@magical/engine":"*"}}
+{
+  "name": "@magical/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@magical/engine": "*"
+  }
+}
