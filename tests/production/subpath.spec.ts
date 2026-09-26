@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("magical-locale", "en"));
+});
+
 test("built assets, invite query, local race and reload work under a project subpath", async ({
   page,
   request,
@@ -18,6 +22,11 @@ test("built assets, invite query, local race and reload work under a project sub
   );
   page.on("response", (response) => {
     const url = new URL(response.url());
+    if (
+      response.request().resourceType() === "image" &&
+      response.status() >= 400
+    )
+      failedRequests.push(`${response.status()} ${url.pathname}`);
     if (["script", "stylesheet"].includes(response.request().resourceType())) {
       assets.push(url.pathname);
       if (response.status() >= 400)

@@ -25,3 +25,8 @@ Persist full room state only behind server access. Clients submit actions and ex
 ## Presentation and verification
 
 Render board/racer cards, active actor, scores, pending choices and readable causal events. Use original symbolic assets, responsive touch controls, keyboard focus and reduced motion. Test pure engine behavior, seeded complete games, adversarial commands, projected privacy and browser user journeys separately. Production configuration must explain backend setup, privileged-secret boundaries and the fact that noindex is not authentication.
+# Presentation localization and artwork
+
+`I18nProvider` selects `en` or `zh-Hant` and persists the choice using `magical-locale`. New browsers default to Traditional Chinese. Translation runs only at the view boundary; canonical commands, racer IDs, events and replay data are unchanged. Player-authored nicknames are preserved. `racerTranslations.ts` contains the 36 original Chinese display translations and current engine-message translations, retaining English identities for reference.
+
+The generated illustration is a decorative board background. Numbered spaces, effects, tokens and accessible labels remain data-driven HTML. Image prompts and provenance live in `ART_DIRECTION.md`. Generation service failures do not replace working character tokens with missing assets.

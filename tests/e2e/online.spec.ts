@@ -13,6 +13,9 @@ test("two browser identities create, join, privately select, reveal and reconnec
   );
   const hostContext = await browser.newContext();
   const guestContext = await browser.newContext();
+  for (const context of [hostContext, guestContext]) {
+    await context.addInitScript(() => localStorage.setItem("magical-locale", "en"));
+  }
   const host = await hostContext.newPage();
   const guest = await guestContext.newPage();
   const guestSnapshots: RoomView[] = [];

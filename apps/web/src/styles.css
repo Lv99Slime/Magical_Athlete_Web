@@ -1,5 +1,6 @@
 :root {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family:
+    Arial, Helvetica, "Microsoft JhengHei", "PingFang TC", sans-serif;
   color: #25241f;
   background: #e8e0c0;
   font-synthesis: none;
@@ -443,6 +444,7 @@ footer {
 }
 .card-heading {
   display: flex;
+  flex-direction: column;
   gap: 12px;
   align-items: center;
   margin-bottom: 15px;
@@ -451,10 +453,22 @@ footer {
   flex-shrink: 0;
 }
 .card-name {
+  min-width: 0;
+  width: 100%;
+  overflow-wrap: anywhere;
   font-family: Georgia, serif;
   font-size: 24px;
   font-weight: bold;
   line-height: 1.05;
+}
+.english-name {
+  display: block;
+  font:
+    14px Arial,
+    Helvetica,
+    sans-serif;
+  line-height: 1.4;
+  margin-top: 5px;
 }
 .power-name {
   font-size: 10px;
@@ -1094,4 +1108,207 @@ summary {
 }
 .token.warp-arrival {
   animation: warp-arrival 0.35s steps(4);
+}
+
+/* Illustrated paper edition: art remains separate from the rules-driven tiles. */
+.racer-art {
+  display: inline-block;
+  flex: 0 0 auto;
+  background-size: 300% 200%;
+  background-repeat: no-repeat;
+  border-radius: 12%;
+  vertical-align: middle;
+}
+.hero-racer .racer-art {
+  display: block;
+  margin: 0 auto 8px;
+}
+.token .racer-art {
+  width: 29px !important;
+  height: 29px !important;
+  border-radius: 50%;
+}
+@media (max-width: 600px) {
+  .hero-racer .racer-art {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 1;
+  }
+  .token .racer-art {
+    width: 22px !important;
+    height: 22px !important;
+  }
+}
+.language-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.language-toggle select {
+  width: auto;
+  padding: 8px;
+  font-size: 13px;
+}
+html[lang="zh-Hant"] h1,
+html[lang="zh-Hant"] h2,
+html[lang="zh-Hant"] h3 {
+  font-family: "Microsoft JhengHei", "PingFang TC", serif;
+}
+html[lang="zh-Hant"] .hero h1 {
+  letter-spacing: -1px;
+  line-height: 1.18;
+}
+html[lang="zh-Hant"] .hero-copy {
+  line-height: 1.8;
+}
+.hero-art {
+  background-image: url("/art/race-world.webp");
+  background-size: cover;
+  background-position: center;
+  mask-image: none;
+  border: 2px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  transform: rotate(1deg);
+}
+.hero-racer {
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.hero-racer span {
+  font-size: 17px;
+}
+.racer-card {
+  background: #ede4cf;
+}
+.racer-card:hover:not(:disabled) {
+  background: #f4ecd6;
+}
+.racer-card p {
+  line-height: 1.6;
+}
+.board-panel {
+  background: var(--paper) url("/art/race-world.webp") center top / 100% auto
+    no-repeat;
+  border: 3px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
+}
+.board-title {
+  min-height: 106px;
+  align-items: flex-start;
+}
+.board-title h2 {
+  background: var(--paper);
+  padding: 8px 12px;
+  border: 2px solid var(--ink);
+  transform: rotate(-2deg);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.board-title > span {
+  background: var(--paper);
+  padding: 8px;
+  border: 1px solid var(--ink);
+}
+.track-grid {
+  border: 0;
+  gap: 6px;
+  padding: 8px;
+  background: #ede4cf70;
+}
+.space {
+  border: 2px solid var(--ink);
+  background: #f4ecd6f0;
+  box-shadow: 2px 3px 0 #25241f55;
+  border-radius: 7px;
+}
+.space-number {
+  display: inline-block;
+  min-width: 20px;
+  text-align: center;
+}
+.space.start,
+.space.finish {
+  background: #25241f;
+}
+.space.star {
+  background: #e8bc5a;
+}
+.space.trip {
+  background: #f4a2be;
+}
+.space.arrow {
+  background: #80c4cf;
+}
+.track-spacer {
+  border: 0;
+  background: transparent;
+}
+.race-roster > div {
+  background: #ede4cfee;
+}
+.board-caption {
+  background: var(--paper);
+  width: fit-content;
+  padding: 5px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+@media (max-width: 600px) {
+  .language-toggle {
+    gap: 4px;
+    font-size: 12px;
+  }
+  .language-toggle select {
+    max-width: 108px;
+  }
+  .hero-art {
+    min-height: 325px;
+    height: auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    padding: 18px;
+  }
+  .hero-racer {
+    position: relative;
+    inset: auto;
+    min-width: 0;
+    padding: 6px;
+  }
+  .hero-racer svg {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+  }
+  .hero-racer span {
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+  .hero-sticker {
+    width: 64px;
+    height: 64px;
+    left: calc(50% - 32px);
+    top: calc(50% - 32px);
+    font-size: 11px;
+  }
+  .board-title {
+    min-height: 88px;
+  }
+  .board-title h2 {
+    padding: 6px;
+    font-size: 22px;
+  }
+  .board-title > span {
+    max-width: 125px;
+  }
+  .track-grid {
+    gap: 3px;
+    padding: 2px;
+  }
+  .space {
+    padding: 2px;
+    border-width: 1px;
+    border-radius: 4px;
+  }
+  html[lang="zh-Hant"] .hero h1 {
+    font-size: 45px;
+  }
 }

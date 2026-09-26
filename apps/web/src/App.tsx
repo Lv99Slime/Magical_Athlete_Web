@@ -1,10 +1,11 @@
+import { useI18n, translateUiMessage, phaseLabel } from "./i18n";
+import { racerLabel, translateGameText } from "./racerTranslations";
 import { useEffect, useRef, useState } from "react";
 import {
   applyCommand,
   createGame,
   projectState,
   RACERS,
-  racerName,
   SCHEDULE,
 } from "@magical/engine";
 import type { GameState, PlayerAction, PlayerView } from "@magical/engine";
@@ -34,6 +35,8 @@ function actorFor(s: GameState) {
   );
 }
 export function App() {
+  const { t, locale, setLocale } = useI18n();
+
   const [game, setGame] = useState<GameState>();
   const [saved, setSaved] = useState<GameState>();
   const [screen, setScreen] = useState<"home" | "local" | "online">("home");
@@ -194,13 +197,26 @@ export function App() {
           <span>ATHLETE</span>
         </button>
         <div className="header-right">
-          <span className="edition">CMYK 2025 · Four races</span>
+          <label className="language-toggle">
+            <span>{t("Language", "語言")}</span>
+            <select
+              aria-label="Language / 語言"
+              value={locale}
+              onChange={(e) => setLocale(e.target.value as "en" | "zh-Hant")}
+            >
+              <option value="zh-Hant">繁體中文</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <span className="edition">
+            {t("CMYK 2025 · Four races", "CMYK 2025 · 四場比賽")}
+          </span>
           <button
             className="quiet"
             ref={guideTrigger}
             onClick={() => setLibrary(true)}
           >
-            Racer guide
+            {t("Racer guide", "選手圖鑑")}
           </button>
           {screen !== "home" && (
             <label className="fast-toggle">
@@ -209,16 +225,16 @@ export function App() {
                 checked={fast}
                 onChange={(e) => setFast(e.target.checked)}
               />{" "}
-              Fast animations
+              {t("Fast animations", "快速動畫")}
             </label>
           )}
         </div>
       </header>
       {error && (
         <div className="error" role="alert">
-          {error}
+          {translateGameText(translateUiMessage(error, locale), locale)}
           <button className="quiet" onClick={() => setError("")}>
-            Dismiss
+            {t("Dismiss", "關閉訊息")}
           </button>
         </div>
       )}
@@ -248,22 +264,27 @@ export function App() {
       ) : view ? (
         <>
           <div className="game-topline">
-            <span className="race-stamp">Race {view.raceNumber} / 4</span>
+            <span className="race-stamp">
+              {t("Race ", "賽事 ")}
+              {view.raceNumber} / 4
+            </span>
             <h1>
               {view.phase === "draft"
-                ? "Build your team"
+                ? t("Build your team", "組建你的隊伍")
                 : view.phase === "selection"
-                  ? "Choose your racers"
+                  ? t("Choose your racers", "選擇你的選手")
                   : view.phase === "finished"
-                    ? "Final standings"
+                    ? t("Final standings", "最終排名")
                     : view.phase === "results"
-                      ? "Race results"
+                      ? t("Race results", "本場賽果")
                       : SCHEDULE[view.raceNumber - 1]?.trackId === "wild_wilds"
-                        ? "Into the Wild Wilds"
-                        : "Race the Mild Mile"}
+                        ? t("Into the Wild Wilds", "闖進狂野荒野")
+                        : t("Race the Mild Mile", "馳騁悠閒一哩")}
             </h1>
             <span className="save-status">
-              {screen === "local" ? saveStatus : `Room ${room?.code}`}
+              {screen === "local"
+                ? translateUiMessage(saveStatus, locale)
+                : t(`Room ${room?.code}`, `房間 ${room?.code}`)}
             </span>
           </div>
           <Scoreboard view={view} />
@@ -272,16 +293,21 @@ export function App() {
           (view.phase === "selection" || view.pending) ? (
             <section className="handoff">
               <div className="sealed-card">
-                <span>Private choice</span>
+                <span>{t("Private choice", "秘密選擇")}</span>
                 <h2>
-                  Pass to {view.players.find((p) => p.id === actor)?.name}
+                  {t("Pass to ", "請交給 ")}
+                  {view.players.find((p) => p.id === actor)?.name}
                 </h2>
                 <p>
-                  Everyone else, look away. Reveal your options when you’re
-                  ready.
+                  {t(
+                    "Everyone else, look away. Reveal your options when you’re ready.",
+                    "其他玩家請先避開畫面。準備好後，就可以查看你的選項。",
+                  )}
                 </p>
                 <button className="primary" onClick={() => setCurtain(false)}>
-                  I’m {view.players.find((p) => p.id === actor)?.name} — reveal
+                  {t("I’m ", "我是 ")}
+                  {view.players.find((p) => p.id === actor)?.name}{" "}
+                  {t("— reveal", "— 查看選項")}
                 </button>
               </div>
             </section>
@@ -296,24 +322,26 @@ export function App() {
           )}
         </>
       ) : (
-        <p>Loading game…</p>
+        <p>{t("Loading game…", "正在載入遊戲…")}</p>
       )}
       <footer>
-        Original artwork · Unofficial private-play implementation · CMYK 2025
-        rules with the supplied August 2026 update.
+        {t(
+          "Original artwork · Unofficial private-play implementation · CMYK 2025 rules with the supplied August 2026 update.",
+          "原創美術 · 非官方私人遊玩版本 · 依據 CMYK 2025 規則及所提供的 2026 年 8 月更新。",
+        )}
       </footer>
       {library && (
         <div className="modal-backdrop">
           <section
             role="dialog"
             aria-modal="true"
-            aria-label="All 36 racers"
+            aria-label={t("All 36 racers", "全部 36 位選手")}
             className="library"
           >
             <div className="section-heading">
-              <h2>Meet all 36 racers</h2>
+              <h2>{t("Meet all 36 racers", "認識全部 36 位選手")}</h2>
               <button autoFocus onClick={() => setLibrary(false)}>
-                Close guide
+                {t("Close guide", "關閉圖鑑")}
               </button>
             </div>
             <div className="card-grid">
@@ -342,15 +370,12 @@ function Home({
   onOnline: (create: boolean, name: string, code: string) => void;
   onResumeOnline: () => void;
 }) {
+  const { t, locale } = useI18n();
+
   const [count, setCount] = useState(3);
-  const [names, setNames] = useState([
-    "Player 1",
-    "Player 2",
-    "Player 3",
-    "Player 4",
-    "Player 5",
-    "Player 6",
-  ]);
+  const [names, setNames] = useState(() =>
+    Array.from({ length: 6 }, (_, i) => t(`Player ${i + 1}`, `玩家 ${i + 1}`)),
+  );
   const [double, setDouble] = useState(false);
   const [randomTeams, setRandomTeams] = useState(false);
   const [nickname, setNickname] = useState("");
@@ -362,47 +387,56 @@ function Home({
       <section className="hero">
         <div>
           <p className="eyebrow">
-            36 racers. Four races. One very strange field.
+            {t(
+              "36 racers. Four races. One very strange field.",
+              "36 位選手，四場比賽，一場奇想競速。",
+            )}
           </p>
           <h1>
-            A little magic.
+            {t("A little magic.", "一點魔法，")}
             <br />
-            <em>A lot of racing.</em>
+            <em>{t("A lot of racing.", "無限競速。")}</em>
           </h1>
           <p className="hero-copy">
-            Draft a team of unlikely athletes. Pick your moment, roll the die,
-            and let their powers turn the race upside down.
+            {t(
+              "Draft a team of unlikely athletes. Pick your moment, roll the die, and let their powers turn the race upside down.",
+              "招募一隊意想不到的運動員。選好時機、擲出骰子，讓他們的能力扭轉賽局。",
+            )}
           </p>
           <a href="#local" className="primary link-button">
-            Play on this device
+            {t("Play on this device", "在此裝置遊玩")}
           </a>
         </div>
         <div className="hero-art" aria-hidden="true">
           {["huge_baby", "magician", "suckerfish", "legs"].map((id, i) => (
             <div key={id} className={`hero-racer hero-racer-${i}`}>
               <RacerArt id={id} size={150} />
-              <span>{racerName(id)}</span>
+              <span>{racerLabel(id, locale)}</span>
             </div>
           ))}
           <span className="hero-sticker">
             2–6
             <br />
-            PLAYERS
+            {t("PLAYERS", "位玩家")}
           </span>
         </div>
       </section>
       <div className="home-panels">
         <section id="local" className="setup-panel">
           <div className="section-heading">
-            <h2>At the same table</h2>
-            <span>Pass & play</span>
+            <h2>{t("At the same table", "同枱對戰")}</h2>
+            <span>{t("Pass & play", "輪流傳機")}</span>
           </div>
           <p>
-            One device. Everyone gets a private racer choice before each race.
+            {t(
+              "One device. Everyone gets a private racer choice before each race.",
+              "共用一部裝置，每場比賽前由各人秘密選擇自己的選手。",
+            )}
           </p>
           {saved && (
             <button className="resume" onClick={onResume}>
-              Resume saved game · Race {saved.raceNumber} · {saved.phase}
+              {t("Resume saved game · Race ", "繼續存檔 · 賽事 ")}
+              {saved.raceNumber} · {phaseLabel(saved.phase, locale)}
             </button>
           )}
           <form
@@ -416,7 +450,7 @@ function Home({
             }}
           >
             <label>
-              Players
+              {t("Players", "玩家人數")}
               <select
                 value={count}
                 onChange={(e) => {
@@ -432,7 +466,8 @@ function Home({
             <div className="name-inputs">
               {names.slice(0, count).map((name, i) => (
                 <label key={i}>
-                  Player {i + 1}
+                  {t("Player ", "玩家 ")}
+                  {i + 1}
                   <input
                     required
                     maxLength={24}
@@ -448,8 +483,10 @@ function Home({
             </div>
             {count === 2 ? (
               <p className="help">
-                Two-player rules: draft eight racers each and race two at a
-                time.
+                {t(
+                  "Two-player rules: draft eight racers each and race two at a time.",
+                  "雙人規則：每人招募八位選手，每場派出兩位選手。",
+                )}
               </p>
             ) : count === 3 ? (
               <label className="check">
@@ -458,7 +495,10 @@ function Home({
                   checked={double}
                   onChange={(e) => setDouble(e.target.checked)}
                 />{" "}
-                Two racers per player (optional variant)
+                {t(
+                  "Two racers per player (optional variant)",
+                  "每人派出兩位選手（可選變體）",
+                )}
               </label>
             ) : null}
             <label className="check">
@@ -467,21 +507,26 @@ function Home({
                 checked={randomTeams}
                 onChange={(e) => setRandomTeams(e.target.checked)}
               />{" "}
-              Deal random teams instead of drafting
+              {t(
+                "Deal random teams instead of drafting",
+                "隨機分配隊伍，略過選秀",
+              )}
             </label>
             <button className="primary" type="submit">
-              Start local game
+              {t("Start local game", "開始本機遊戲")}
             </button>
           </form>
         </section>
         <section className="setup-panel online-panel">
           <div className="section-heading">
-            <h2>Different tables</h2>
-            <span>Online room</span>
+            <h2>{t("Different tables", "異地同樂")}</h2>
+            <span>{t("Online room", "線上房間")}</span>
           </div>
           <p>
-            Create a room, share the code, and race with friends on their own
-            devices.
+            {t(
+              "Create a room, share the code, and race with friends on their own devices.",
+              "建立房間、分享房號，朋友就可以用各自的裝置一起競賽。",
+            )}
           </p>
           {onlineConfigured ? (
             <form
@@ -491,7 +536,7 @@ function Home({
               }}
             >
               <label>
-                Your nickname
+                {t("Your nickname", "你的暱稱")}
                 <input
                   required
                   maxLength={24}
@@ -500,7 +545,7 @@ function Home({
                 />
               </label>
               <label>
-                Room code
+                {t("Room code", "房間代碼")}
                 <input
                   required
                   minLength={6}
@@ -512,7 +557,7 @@ function Home({
               </label>
               <div className="button-row">
                 <button disabled={busy} type="submit">
-                  Join room
+                  {t("Join room", "加入房間")}
                 </button>
                 <button
                   disabled={busy || !nickname.trim()}
@@ -520,7 +565,7 @@ function Home({
                   className="primary"
                   onClick={() => onOnline(true, nickname, "")}
                 >
-                  Create room
+                  {t("Create room", "建立房間")}
                 </button>
               </div>
               {localStorage.getItem("magical-room") && (
@@ -530,29 +575,35 @@ function Home({
                   onClick={onResumeOnline}
                   disabled={busy}
                 >
-                  Reconnect to last room
+                  {t("Reconnect to last room", "重新連接上次房間")}
                 </button>
               )}
             </form>
           ) : (
             <div className="online-unavailable">
-              <strong>Online rooms aren’t configured yet</strong>
+              <strong>
+                {t("Online rooms aren’t configured yet", "線上房間尚未設定")}
+              </strong>
               <p>
-                This build needs its Supabase connection before online play is
-                available. Local play is ready without a server.
+                {t(
+                  "This build needs its Supabase connection before online play is available. Local play is ready without a server.",
+                  "設定 Supabase 連線後即可開啟線上遊玩。本機遊戲毋須伺服器。",
+                )}
               </p>
             </div>
           )}
           <div className="schedule">
-            <h3>The four-race schedule</h3>
+            <h3>{t("The four-race schedule", "四場比賽安排")}</h3>
             {SCHEDULE.map((s) => (
               <div key={s.race}>
                 <span>
                   {s.race}.{" "}
-                  {s.trackId === "mild_mile" ? "Mild Mile" : "Wild Wilds"}
+                  {s.trackId === "mild_mile"
+                    ? t("Mild Mile", "悠閒一哩")
+                    : t("Wild Wilds", "狂野荒野")}
                 </span>
                 <strong>
-                  {s.firstPoints} / {s.secondPoints} pts
+                  {s.firstPoints} / {s.secondPoints} {t("pts", "分")}
                 </strong>
               </div>
             ))}
@@ -571,13 +622,15 @@ function Lobby({
   busy: boolean;
   send: (a: Parameters<OnlineClient["send"]>[2]) => void;
 }) {
+  const { t } = useI18n();
+
   const [double, setDouble] = useState(false);
   const [randomTeams, setRandomTeams] = useState(false);
   const [copied, setCopied] = useState(false);
   const me = room.members.find((m) => m.id === room.playerId);
   return (
     <main className="lobby setup-panel">
-      <p className="eyebrow">Online room</p>
+      <p className="eyebrow">{t("Online room", "線上房間")}</p>
       <h1>{room.code}</h1>
       <button
         onClick={() => {
@@ -587,19 +640,24 @@ function Lobby({
             .catch(() => setCopied(false));
         }}
       >
-        {copied ? "Link copied" : "Copy invite link"}
+        {copied
+          ? t("Link copied", "已複製連結")
+          : t("Copy invite link", "複製邀請連結")}
       </button>
-      <h2>Players · {room.members.length} / 6</h2>
+      <h2>
+        {t("Players · ", "玩家 · ")}
+        {room.members.length} / 6
+      </h2>
       <ul className="member-list">
         {room.members.map((m) => (
           <li key={m.id}>
             <strong>
               {m.name}
-              {m.id === room.playerId ? " (you)" : ""}
+              {m.id === room.playerId ? t(" (you)", "（你）") : ""}
             </strong>
             <span>
-              {m.id === room.hostId ? "Host · " : ""}
-              {m.ready ? "Ready" : "Not ready"}
+              {m.id === room.hostId ? t("Host · ", "房主 · ") : ""}
+              {m.ready ? t("Ready", "已準備") : t("Not ready", "未準備")}
             </span>
           </li>
         ))}
@@ -609,7 +667,7 @@ function Lobby({
         className="primary"
         onClick={() => send({ type: "ready", ready: !me?.ready })}
       >
-        {me?.ready ? "Not ready" : "Ready to race"}
+        {me?.ready ? t("Not ready", "未準備") : t("Ready to race", "準備好了")}
       </button>
       {room.playerId === room.hostId && (
         <div className="host-controls">
@@ -620,7 +678,7 @@ function Lobby({
                 checked={double}
                 onChange={(e) => setDouble(e.target.checked)}
               />{" "}
-              Two racers per player
+              {t("Two racers per player", "每人派出兩位選手")}
             </label>
           )}
           <label className="check">
@@ -629,7 +687,7 @@ function Lobby({
               checked={randomTeams}
               onChange={(e) => setRandomTeams(e.target.checked)}
             />{" "}
-            Random teams instead of drafting
+            {t("Random teams instead of drafting", "隨機分配隊伍，略過選秀")}
           </label>
           <button
             disabled={
@@ -645,13 +703,15 @@ function Lobby({
               })
             }
           >
-            Start game
+            {t("Start game", "開始遊戲")}
           </button>
         </div>
       )}
       <p className="help">
-        Everyone must be ready before the host starts. Reloading on this browser
-        reconnects your seat.
+        {t(
+          "Everyone must be ready before the host starts. Reloading on this browser reconnects your seat.",
+          "所有玩家準備就緒後，房主就可以開始遊戲。使用同一瀏覽器重新載入，即可回到原有座位。",
+        )}
       </p>
     </main>
   );
@@ -667,6 +727,8 @@ export function GameScreen({
   busy: boolean;
   act: (action: PlayerAction) => void;
 }) {
+  const { t, locale } = useI18n();
+
   const [selected, setSelected] = useState<string[]>([]);
   const me = view.players.find((p) => p.id === playerId)!;
   const count = view.config.doubleRacers ? 2 : 1;
@@ -683,8 +745,11 @@ export function GameScreen({
   const decision =
     view.pending && view.pending.ownerId === playerId ? (
       <section className="decision" aria-live="polite">
-        <p className="eyebrow">{me.name} · Power decision</p>
-        <h2>{view.pending.prompt}</h2>
+        <p className="eyebrow">
+          {me.name}
+          {t(" · Power decision", " · 能力選擇")}
+        </p>
+        <h2>{translateGameText(view.pending.prompt, locale)}</h2>
         <div className="button-row">
           {view.pending.options.map((o) => (
             <button
@@ -698,7 +763,7 @@ export function GameScreen({
                 })
               }
             >
-              {o.label}
+              {translateGameText(o.label, locale)}
             </button>
           ))}
         </div>
@@ -713,14 +778,24 @@ export function GameScreen({
         <div className="section-heading">
           <div>
             <p className="eyebrow">
-              Draft {view.draft.round + 1} / {view.draft.rounds}
+              {t("Draft ", "選秀 ")}
+              {view.draft.round + 1} / {view.draft.rounds}
             </p>
-            <h2>{drafter?.name}, pick a racer</h2>
+            <h2>
+              {drafter?.name}
+              {t(", pick a racer", "，請選擇一位選手")}
+            </h2>
           </div>
-          <span>Snake draft · {me.team.length} recruited by you</span>
+          <span>
+            {t("Snake draft · ", "蛇形選秀 · ")}
+            {me.team.length} {t("recruited by you", "位已加入你的隊伍")}
+          </span>
         </div>
         {drafter?.id !== playerId && (
-          <p role="status">Waiting for {drafter?.name} to choose.</p>
+          <p role="status">
+            {t("Waiting for ", "等待 ")}
+            {drafter?.name} {t("to choose.", "作出選擇。")}
+          </p>
         )}
         <div className="card-grid">
           {view.draft.pool.map((id) => (
@@ -744,24 +819,38 @@ export function GameScreen({
       <main>
         {view.selectionReady.includes(playerId) ? (
           <section className="waiting">
-            <h2>Your racers are locked in.</h2>
+            <h2>{t("Your racers are locked in.", "已確認你的選手。")}</h2>
             <p>
-              Waiting for everyone’s secret choices. All racers reveal together.
+              {t(
+                "Waiting for everyone’s secret choices. All racers reveal together.",
+                "等待所有玩家完成秘密選擇，選手將同時公開。",
+              )}
             </p>
           </section>
         ) : (
           <>
             <div className="section-heading">
               <div>
-                <p className="eyebrow">Private selection · {me.name}</p>
+                <p className="eyebrow">
+                  {t("Private selection · ", "秘密選擇 · ")}
+                  {me.name}
+                </p>
                 <h2>
-                  Choose {count === 2 ? "two racers" : "one racer"} for race{" "}
-                  {view.raceNumber}
+                  {t(
+                    `Choose ${count === 2 ? "two racers" : "one racer"} for race ${view.raceNumber}`,
+                    `為第 ${view.raceNumber} 場比賽選擇${count === 2 ? "兩位" : "一位"}選手`,
+                  )}
                 </h2>
                 <p>
                   {count === 2
-                    ? "Select in turn order: first selected races first. Deselect to change the order."
-                    : "Each racer can compete in only one race."}
+                    ? t(
+                        "Select in turn order: first selected races first. Deselect to change the order.",
+                        "依回合次序選擇：先選的選手先行動。取消選擇即可重新排序。",
+                      )
+                    : t(
+                        "Each racer can compete in only one race.",
+                        "每位選手只能參與其中一場比賽。",
+                      )}
                 </p>
               </div>
               <button
@@ -769,7 +858,8 @@ export function GameScreen({
                 disabled={busy || selected.length !== count}
                 onClick={() => act({ type: "select", racerIds: selected })}
               >
-                Lock in {selected.length} / {count}
+                {t("Lock in ", "確認 ")}
+                {selected.length} / {count}
               </button>
             </div>
             <div className="card-grid">
@@ -799,13 +889,19 @@ export function GameScreen({
         <div className="result-banner">
           <p className="eyebrow">
             {view.phase === "finished"
-              ? "All four races complete"
-              : `Race ${view.raceNumber} complete`}
+              ? t("All four races complete", "四場比賽全部完成")
+              : t(
+                  `Race ${view.raceNumber} complete`,
+                  `第 ${view.raceNumber} 場比賽完成`,
+                )}
           </p>
           <h2>
             {view.phase === "finished"
-              ? `${winners.map((p) => p.name).join(" & ")} ${winners.length > 1 ? "share the win!" : "wins!"}`
-              : "Points on the board."}
+              ? t(
+                  `${winners.map((p) => p.name).join(" & ")} ${winners.length > 1 ? "share the win!" : "wins!"}`,
+                  `${winners.map((p) => p.name).join("、")}${winners.length > 1 ? "並列冠軍！" : "獲勝！"}`,
+                )
+              : t("Points on the board.", "本場得分已結算。")}
           </h2>
           {view.phase === "results" && (
             <button
@@ -813,18 +909,25 @@ export function GameScreen({
               disabled={busy}
               onClick={() => act({ type: "nextRace" })}
             >
-              Prepare race {view.raceNumber + 1}
+              {t("Prepare race ", "準備下一場 · 賽事 ")}
+              {view.raceNumber + 1}
             </button>
           )}
         </div>
         {view.history.map((h) => (
           <section key={h.race} className="history-race">
-            <h3>Race {h.race}</h3>
+            <h3>
+              {t("Race ", "賽事 ")}
+              {h.race}
+            </h3>
             <div>
               {h.placements.map((id, i) => (
                 <p key={`${id}-${i}`}>
                   <strong>{i + 1}.</strong>{" "}
-                  {racerName(h.racers.find((r) => r.id === id)?.racerId ?? id)}
+                  {racerLabel(
+                    h.racers.find((r) => r.id === id)?.racerId ?? id,
+                    locale,
+                  )}
                 </p>
               ))}
             </div>
@@ -851,15 +954,20 @@ export function GameScreen({
               <p className="eyebrow">
                 {current
                   ? view.players.find((p) => p.id === current.ownerId)?.name
-                  : "Resolving effects"}
+                  : t("Resolving effects", "正在處理效果")}
               </p>
               <h2>
-                {current ? racerName(current.racerId) : "Race in progress"}
+                {current
+                  ? racerLabel(current.racerId, locale)
+                  : t("Race in progress", "比賽進行中")}
               </h2>
               {view.turn?.face !== undefined && (
                 <span
                   className="die"
-                  aria-label={`Last die result ${view.turn.face}`}
+                  aria-label={t(
+                    `Last die result ${view.turn.face}`,
+                    `上次骰子點數：${view.turn.face}`,
+                  )}
                 >
                   {view.turn.face}
                 </span>
@@ -871,24 +979,30 @@ export function GameScreen({
                 disabled={busy}
                 onClick={() => act({ type: "roll" })}
               >
-                Take turn
+                {t("Take turn", "進行回合")}
               </button>
             ) : (
               <p>
                 {view.pending
-                  ? `Waiting for ${view.players.find((p) => p.id === view.pending?.ownerId)?.name} to decide.`
-                  : "Waiting for the active player."}
+                  ? t(
+                      `Waiting for ${view.players.find((p) => p.id === view.pending?.ownerId)?.name} to decide.`,
+                      `等待 ${view.players.find((p) => p.id === view.pending?.ownerId)?.name} 作出選擇。`,
+                    )
+                  : t("Waiting for the active player.", "等待目前玩家操作。")}
               </p>
             )}
           </section>
           <Board view={view} />
           {view.error && (
             <div className="error" role="alert">
-              {view.error}
+              {translateGameText(
+                translateUiMessage(view.error, locale),
+                locale,
+              )}
             </div>
           )}
           <details className="power-reference">
-            <summary>Racer powers in this race</summary>
+            <summary>{t("Racer powers in this race", "本場選手能力")}</summary>
             <div className="card-grid compact">
               {view.racers.map((r) => (
                 <RacerCard key={r.id} id={r.powerId} />
@@ -904,10 +1018,15 @@ export function GameScreen({
   );
 }
 function Team({ view, playerId }: { view: PlayerView; playerId: string }) {
+  const { t } = useI18n();
+
   const p = view.players.find((x) => x.id === playerId);
   return (
     <details className="team">
-      <summary>Your team · {p?.team.length} racers</summary>
+      <summary>
+        {t("Your team · ", "你的隊伍 · ")}
+        {p?.team.length} {t("racers", "位選手")}
+      </summary>
       <div className="card-grid compact">
         {p?.team.map((id) => (
           <RacerCard key={id} id={id} />

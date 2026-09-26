@@ -10,3 +10,4 @@ playwright-report/
 coverage/
 .npm-cache/
 .browsers/
+output/

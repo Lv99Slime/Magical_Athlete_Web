@@ -62,3 +62,6 @@ This matrix links real scenarios; it does not claim exhaustive coverage of every
 | Deterministic full games, replay API and serialization | simulation.test.ts; assumptions.test.ts | Passed |
 | Supabase authority, concurrency, secrecy, reconnect, full game | tests/backend/multiplayer.test.ts; tests/e2e/online.spec.ts | Implemented; real backend unavailable locally; mandatory CI gate |
 | Production asset subpath, reload, mobile and console errors | tests/production/subpath.spec.ts | See current execution record |
+# Localization coverage
+
+`tests/i18n.test.ts` verifies exact coverage of the supplied 36 racer IDs, English identity preservation, movement amount versus finalized die face wording, every current static engine prompt/choice, nickname preservation and event immutability. `tests/e2e/localization.spec.ts` exercises language persistence, the 36 translated cards, ordered selection and saved-game resume. These tests supplement, rather than replace, the existing mechanical tests below.

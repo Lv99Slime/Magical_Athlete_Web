@@ -12,7 +12,7 @@
 | All 36 racer mechanics | Directly tested | 36 named behavior tests, catalogue consistency and 36 elimination/deactivation tests |
 | Critical interactions | Regression-tested | Reroll provenance; Copy Cat atomic action; original-copy priority; Baba Yaga retained trip; group passing; finish ordering; copied setup; loop vs progress |
 | Full game variants | Verified simulations | 2–6 players, three-player double mode, four races, draft, used racers and ledger |
-| Local UI | Browser-tested | Private handoff, ordered selection, IndexedDB, original SVG, responsive board, causal log and choices |
+| Local UI | Browser-tested | Private handoff, ordered selection, IndexedDB, original generated artwork, responsive board, causal log and choices |
 | Supabase authority | Implemented, not live-verified | JWT, membership actor, service-only RPCs, CAS/idempotency, private views and version-only Broadcast |
 | Real multiplayer tests | Externally blocked here | Six API tests including full game; dedicated two-browser journey; mandatory Docker CI job |
 | Deployment preparation | Implemented | Relative assets, production subpath tests, Pages gated on application/backend CI, setup docs |
@@ -23,10 +23,10 @@
 
 - Clean `npm ci --cache .npm-cache` succeeded; dependency audit: **0 vulnerabilities**.
 - `npm run typecheck` and `npm run lint`: passed.
-- `npm test`: **126 passed, 6 real-backend tests skipped** without service configuration. Includes 250 generated property cases.
+- `npm test`: **130 passed, 6 real-backend tests skipped** without service configuration. Includes 250 generated property cases.
 - `npm run build`: passed; app, React, validation and online chunks in `dist/`. Upstream Zod annotation warnings are non-failing.
 - `npm run backend:bundle`: passed, generated from the same engine source as the browser.
-- `npm run test:e2e`: **20 passed** across Chromium, Firefox, WebKit, tablet and mobile, including complete games and reload.
+- `npm run test:e2e`: **40 passed** across Chromium, Firefox, WebKit, tablet and mobile, including complete games and reload.
 - `npm run test:production`: **2 passed** at `/magical-athlete/`; assets, query, local race, reload, mobile overflow, page/console errors and failed requests checked.
 - Production desktop/mobile screenshots visually reviewed; artifacts are ignored under `test-results/`.
 
@@ -42,5 +42,13 @@ Windows sandbox blocked esbuild ancestor traversal; affected commands ran in the
 No known failing local regression remains at this checkpoint. This is not exhaustive proof of every possible multi-power combination. Explicit interpretations remain in RULES_ASSUMPTIONS.md.
 
 ## Next autonomous step
+
+### Visual and Traditional Chinese update — 2026-09-26
+
+- Added persistent English / Traditional Chinese selection; Traditional Chinese is the default for new browsers. All 36 racer names, power summaries, current decision prompts and normal event messages have display translations. Original English identities remain available; no engine state or replay strings are translated.
+- Generated and integrated an original illustrated board background. Updated paper cards, board tiles and narrow-screen hero layout. The generated asset is stored in `apps/web/public/art/race-world.webp`; source prompt and tool provenance are in `ART_DIRECTION.md`.
+- All 36 original character portraits generated successfully as six sprite sheets after retrying initial network failures. Integrated into the home page, guide, cards, roster and tokens. All art is optimized WebP; no placeholders remain.
+- Localization browser checks: 15 passed across five projects, including 360px layout, language persistence, keyboard focus and ordered selections/save/reload. Four additional localization unit tests passed (130 total); final artwork and localization checks passed in all five browser projects (20 checks), including 36 unique/decodable portraits and bilingual label containment. Production-subpath desktop/mobile checks passed with image request failures checked.
+
 
 When access is available, run the real-backend gate, fix integration failures, deploy matching backend/frontend, perform hosted multi-browser/reconnect/privacy checks and update this record before closing the Definition of Done. The owner has no routine architecture or agent-coordination task.

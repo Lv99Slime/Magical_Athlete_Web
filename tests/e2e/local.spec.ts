@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("magical-locale", "en"));
+});
+
 test("draft, secret selection, race turn and durable resume", async ({
   page,
 }) => {

@@ -1,5 +1,13 @@
 import { RACERS, SCHEDULE, TRACKS, racerName } from "@magical/engine";
 import type { PlayerView } from "@magical/engine";
+import { useI18n } from "./i18n";
+import {
+  racerLabel,
+  racerTranslation,
+  zhRacerName,
+  eventTypeLabel,
+  translateEvent,
+} from "./racerTranslations";
 export const COLORS = [
   "#f4a2be",
   "#80c4cf",
@@ -8,46 +16,25 @@ export const COLORS = [
   "#b5a4d8",
   "#e99470",
 ];
+/** Six 3x2 sprite sheets, following the source catalogue's stable ID order. */
 export function RacerArt({ id, size = 72 }: { id: string; size?: number }) {
-  const n = Math.max(
+  const index = Math.max(
     0,
     RACERS.findIndex((r) => r.id === id),
   );
+  const cell = index % 6;
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden="true">
-      <circle cx="50" cy="50" r="44" fill={COLORS[n % COLORS.length]} />
-      <g stroke="#25241f" strokeWidth="3" strokeLinejoin="round">
-        <path
-          d={
-            n % 3 === 0
-              ? "M22 68 L31 26 L64 19 L80 65 L62 79 Z"
-              : n % 3 === 1
-                ? "M24 61 Q10 18 46 23 Q85 8 79 58 L70 76 L30 79 Z"
-                : "M20 68 L20 38 Q47 8 76 33 L85 69 L56 82 Z"
-          }
-          fill="#EDE4CF"
-        />
-        <path
-          d={`M32 28 L${24 + (n % 12)} 12 M66 24 L${70 + (n % 13)} 10`}
-          fill="none"
-        />
-        <ellipse cx="39" cy="46" rx="4" ry={5 + (n % 4)} fill="#25241f" />
-        <ellipse cx="63" cy="46" rx="4" ry={5 + (n % 4)} fill="#25241f" />
-        <path d={n % 2 ? "M40 64 Q50 72 64 59" : "M37 64 L62 64"} fill="none" />
-        <path d="M35 77 L30 90 L19 90 M65 77 L73 90 L84 90" fill="none" />
-      </g>
-      <circle cx="77" cy="80" r="12" fill="#25241f" />
-      <text
-        x="77"
-        y="84"
-        textAnchor="middle"
-        fill="#EDE4CF"
-        fontSize="11"
-        fontFamily="Courier New"
-      >
-        {n + 1}
-      </text>
-    </svg>
+    <div
+      className="racer-art"
+      aria-hidden="true"
+      data-racer-art={id}
+      style={{
+        width: size,
+        height: size,
+        backgroundImage: `url(${import.meta.env.BASE_URL}art/racers-${Math.floor(index / 6)}.webp)`,
+        backgroundPosition: `${(cell % 3) * 50}% ${Math.floor(cell / 3) * 100}%`,
+      }}
+    />
   );
 }
 export function RacerCard({
@@ -63,24 +50,40 @@ export function RacerCard({
   onClick?: () => void;
   order?: number;
 }) {
+  const { locale, t } = useI18n();
   const racer = RACERS.find((r) => r.id === id);
+  const translated = racerTranslation(id, locale);
   if (!racer)
     return (
       <article className="racer-card">
-        <strong>No copied power</strong>
-        <p>This racer currently has no eligible external power to copy.</p>
+        <strong>{t("No copied power", "目前沒有複製能力")}</strong>
+        <p>
+          {t(
+            "This racer currently has no eligible external power to copy.",
+            "這名賽手目前沒有符合條件的外來能力可以複製。",
+          )}
+        </p>
       </article>
     );
   const body = (
     <>
       <div className="card-heading">
-        <RacerArt id={id} />
-        <span className="card-name">{racer.name}</span>
+        <RacerArt id={id} size={112} />
+        <span className="card-name">
+          {translated?.name ?? racer.name}
+          {locale === "zh-Hant" && (
+            <small className="english-name">{racer.name}</small>
+          )}
+        </span>
         {order !== undefined && <span className="order-badge">{order}</span>}
       </div>
-      <strong className="power-name">{racer.powerName}</strong>
-      <p>{racer.uiSummary}</p>
-      {disabled && <span className="used-label">Already raced</span>}
+      <strong className="power-name">
+        {translated?.powerName ?? racer.powerName}
+      </strong>
+      <p>{translated?.uiSummary ?? racer.uiSummary}</p>
+      {disabled && (
+        <span className="used-label">{t("Already raced", "已出賽")}</span>
+      )}
     </>
   );
   return onClick ? (
@@ -98,18 +101,31 @@ export function RacerCard({
   );
 }
 export function Board({ view }: { view: PlayerView }) {
+  const { locale, t } = useI18n();
   const schedule = SCHEDULE[Math.max(0, view.raceNumber - 1)];
   const track = TRACKS.find((t) => t.id === schedule.trackId)!;
+  const trackLabel = t(
+    track.name,
+    track.id === "mild_mile" ? "悠閒一哩 · Mild Mile" : "狂野荒野 · Wild Wilds",
+  );
+  const shortName = (id: string) =>
+    locale === "zh-Hant" ? zhRacerName(id) : racerName(id);
   const travel = new Map<string, string>();
   for (const e of view.events)
     if (e.racerId && (e.type === "MOVE" || e.type === "WARP"))
       travel.set(e.racerId, e.type);
   return (
-    <section className="board-panel" aria-label={`${track.name} race board`}>
+    <section
+      className="board-panel"
+      aria-label={t(`${track.name} race board`, `${trackLabel}賽道`)}
+    >
       <div className="board-title">
-        <h2>{track.name}</h2>
+        <h2>{trackLabel}</h2>
         <span>
-          First {schedule.firstPoints} pts · Second {schedule.secondPoints} pts
+          {t(
+            `First ${schedule.firstPoints} pts · Second ${schedule.secondPoints} pts`,
+            `第一名 ${schedule.firstPoints} 分 · 第二名 ${schedule.secondPoints} 分`,
+          )}
         </span>
       </div>
       <div className="track-grid">
@@ -130,17 +146,24 @@ export function Board({ view }: { view: PlayerView }) {
             <div
               key={visual}
               className={`space ${pos === 0 ? "start" : ""} ${pos === 30 ? "finish" : ""} ${effect?.type ?? ""}`}
-              aria-label={`Space ${pos}${effect ? `, ${effect.type}` : ""}`}
+              aria-label={t(
+                `Space ${pos}${effect ? `, ${effect.type}` : ""}`,
+                `第 ${pos} 格${effect ? `，${effect.type === "star" ? "星星" : effect.type === "trip" ? "絆倒" : "箭嘴"}` : ""}`,
+              )}
             >
               <span className="space-number">
-                {pos === 0 ? "START" : pos === 30 ? "FINISH" : pos}
+                {pos === 0
+                  ? t("START", "起點")
+                  : pos === 30
+                    ? t("FINISH", "終點")
+                    : pos}
               </span>
               {effect && (
                 <span className="space-effect">
                   {effect.type === "star"
-                    ? "+1 pt"
+                    ? t("+1 pt", "+1 分")
                     : effect.type === "trip"
-                      ? "TRIP"
+                      ? t("TRIP", "絆倒")
                       : `${effect.delta! > 0 ? "+" : ""}${effect.delta}`}
                 </span>
               )}
@@ -148,7 +171,7 @@ export function Board({ view }: { view: PlayerView }) {
                 {here.map((r) => (
                   <div
                     key={`${r.id}-${r.position}`}
-                    title={`${racerName(r.racerId)} · ${view.players.find((p) => p.id === r.ownerId)?.name}${r.tripped ? " · Tripped" : ""}`}
+                    title={`${racerLabel(r.racerId, locale)} · ${view.players.find((p) => p.id === r.ownerId)?.name}${r.tripped ? t(" · Tripped", " · 已絆倒") : ""}`}
                     className={`token ${travel.get(r.id) === "WARP" ? "warp-arrival" : "move-arrival"} ${view.turn?.racerId === r.id ? "active-token" : ""} ${r.tripped ? "tripped" : ""}`}
                     style={{
                       borderColor:
@@ -158,7 +181,7 @@ export function Board({ view }: { view: PlayerView }) {
                     }}
                   >
                     <RacerArt id={r.racerId} size={32} />
-                    <span>{racerName(r.racerId)}</span>
+                    <span>{shortName(r.racerId)}</span>
                   </div>
                 ))}
               </div>
@@ -167,8 +190,10 @@ export function Board({ view }: { view: PlayerView }) {
         })}
       </div>
       <p className="board-caption">
-        Follow the numbered spaces. A racer’s position and status are also
-        listed below.
+        {t(
+          "Follow the numbered spaces. A racer’s position and status are also listed below.",
+          "沿格子編號前進。下方亦列出每名賽手的位置與狀態。",
+        )}
       </p>
       <div className="race-roster">
         {view.racers.map((r) => (
@@ -178,14 +203,23 @@ export function Board({ view }: { view: PlayerView }) {
           >
             <RacerArt id={r.racerId} size={40} />
             <div>
-              <strong>{racerName(r.racerId)}</strong>
+              <strong>{racerLabel(r.racerId, locale)}</strong>
               <small>
                 {view.players.find((p) => p.id === r.ownerId)?.name} ·{" "}
                 {r.status === "active"
-                  ? `Space ${r.position}${r.tripped ? " · Tripped" : ""}`
-                  : r.status}
+                  ? t(
+                      `Space ${r.position}${r.tripped ? " · Tripped" : ""}`,
+                      `第 ${r.position} 格${r.tripped ? " · 已絆倒" : ""}`,
+                    )
+                  : t(
+                      r.status,
+                      r.status === "finished" ? "已完成比賽" : "已淘汰",
+                    )}
                 {r.powerId !== r.racerId
-                  ? ` · ${racerName(r.powerId)} power`
+                  ? t(
+                      ` · ${racerName(r.powerId)} power`,
+                      ` · ${r.powerId ? zhRacerName(r.powerId) : "沒有可複製"}能力`,
+                    )
                   : ""}
               </small>
             </div>
@@ -196,8 +230,9 @@ export function Board({ view }: { view: PlayerView }) {
   );
 }
 export function Scoreboard({ view }: { view: PlayerView }) {
+  const { t } = useI18n();
   return (
-    <section className="scoreboard" aria-label="Player scores">
+    <section className="scoreboard" aria-label={t("Player scores", "玩家分數")}>
       {view.players.map((p, i) => (
         <div
           key={p.id}
@@ -206,10 +241,13 @@ export function Scoreboard({ view }: { view: PlayerView }) {
           <span>{p.name}</span>
           <strong>
             {p.score}
-            <small> pts</small>
+            <small>{t(" pts", " 分")}</small>
           </strong>
           <small>
-            {p.used.length} / {p.team.length} racers used
+            {t(
+              `${p.used.length} / ${p.team.length} racers used`,
+              `已出賽 ${p.used.length} / ${p.team.length} 名`,
+            )}
           </small>
         </div>
       ))}
@@ -217,10 +255,14 @@ export function Scoreboard({ view }: { view: PlayerView }) {
   );
 }
 export function EventLog({ view }: { view: PlayerView }) {
+  const { locale, t } = useI18n();
   return (
     <details className="event-log" open>
       <summary>
-        What happened <span>{view.events.length} events</span>
+        {t("What happened", "賽事紀錄")}{" "}
+        <span>
+          {t(`${view.events.length} events`, `${view.events.length} 項紀錄`)}
+        </span>
       </summary>
       <ol>
         {view.events
@@ -229,14 +271,20 @@ export function EventLog({ view }: { view: PlayerView }) {
           .map((e) => (
             <li key={e.id}>
               <span className="event-type">
-                {e.type.toLowerCase().replaceAll("_", " ")}
+                {eventTypeLabel(e.type, locale)}
               </span>
-              <p>{e.message}</p>
+              <p>{translateEvent(e, locale, view)}</p>
               {e.parentId !== undefined && (
                 <small>
-                  Caused by:{" "}
-                  {view.events.find((parent) => parent.id === e.parentId)
-                    ?.message ?? "an earlier effect"}
+                  {t("Caused by: ", "觸發來源：")}
+                  {(() => {
+                    const parent = view.events.find(
+                      (parent) => parent.id === e.parentId,
+                    );
+                    return parent
+                      ? translateEvent(parent, locale, view)
+                      : t("an earlier effect", "較早的效果");
+                  })()}
                 </small>
               )}
             </li>
