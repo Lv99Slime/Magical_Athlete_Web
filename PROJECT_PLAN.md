@@ -28,6 +28,10 @@ GitHub Pages hosts the static frontend; Supabase hosts authority and persistence
 Milestones 1–4 have local verification evidence. Online implementation and release configuration are integrated; milestones 5–6 remain externally gated on real Supabase tests, authenticated GitHub CI/deployment and hosted smoke tests. See IMPLEMENTATION_STATUS.md for executed checks. Agent changes were reviewed and integrated by the principal from bounded worktrees; the owner has no merge or coordination task.
 # Follow-up: illustration and Traditional Chinese
 
+## U-route and dice feedback follow-up
+
+Implemented the supplied reference's U-shaped route and explicit corner labels, then added authoritative dice playback before visible movement. Acceptance covers geometry, contained mobile scrolling, exact face/result ordering, rerolls, saved-game resume, reduced motion and the existing full-game journeys. The game engine and track-effect data remain the existing source of mechanical truth.
+
 - Delivered: persistent bilingual UI, all 36 translated racer descriptions, original generated board scenery, narrow-screen layout fixes.
 - Acceptance: locale switching preserves the current match and ordered choices; all current static rule prompts are translated; player nicknames and replay records remain unchanged; desktop/mobile deployment paths resolve the image asset.
 - Delivered: all 36 generated character portraits as six visually reviewed sprite sheets, integrated across cards, guide, home, roster and board tokens. WebP encoding reduces the seven-artwork download to about 2.27 MB.

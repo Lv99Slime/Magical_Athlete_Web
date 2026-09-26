@@ -91,6 +91,7 @@ test("complete all four races through visible player choices", async ({
   await page
     .getByRole("button", { name: "Start local game", exact: true })
     .click();
+  await page.getByLabel("Fast animations").check();
   for (let actions = 0; actions < 1200; actions++) {
     if (
       await page
@@ -119,7 +120,7 @@ test("complete all four races through visible player choices", async ({
       await next.click();
       continue;
     }
-    await page.getByRole("button", { name: "Take turn", exact: true }).click();
+    await page.getByRole("button", { name: "Roll die", exact: true }).click();
   }
   await expect(
     page.getByRole("heading", { name: "Final standings", exact: true }),

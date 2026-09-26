@@ -34,4 +34,6 @@ The supplied CMYK 2025 reference incorporates August 17, 2026 updates. It overri
 Track JSON's finish 30, second corner 15 and ten Wild Wilds special spaces are authoritative implementation inputs but explicitly reconstructed. Keep data-driven and retain provisional-map notice until visual verification. This is a source-confidence limitation, not permission to invent another map.
 # Translation policy
 
+The user's supplied board image (2026-09-26) establishes the U-shaped visual route: first right corner at 12, second right corner at 15, matching the existing Blimp threshold. This presentation update does not constitute an independent audit or remapping of all special-space positions in the supplied JSON.
+
 Traditional Chinese racer and power names are original project translations, not official localized titles. English character names remain visible for identification. UI language selection changes presentation only and introduces no gameplay ruling; the supplied English source-of-truth data and existing interpretations remain authoritative.

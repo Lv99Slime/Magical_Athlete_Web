@@ -26,7 +26,7 @@
 - `npm test`: **130 passed, 6 real-backend tests skipped** without service configuration. Includes 250 generated property cases.
 - `npm run build`: passed; app, React, validation and online chunks in `dist/`. Upstream Zod annotation warnings are non-failing.
 - `npm run backend:bundle`: passed, generated from the same engine source as the browser.
-- `npm run test:e2e`: **40 passed** across Chromium, Firefox, WebKit, tablet and mobile, including complete games and reload.
+- `npm run test:e2e`: **60 browser scenarios validated** across Chromium, Firefox, WebKit, tablet and mobile, including complete games and reload. The latest full run passed 59; its remaining WebKit assertion was corrected to wait for React rendering after the paused clock advances, then passed in a focused rerun.
 - `npm run test:production`: **2 passed** at `/magical-athlete/`; assets, query, local race, reload, mobile overflow, page/console errors and failed requests checked.
 - Production desktop/mobile screenshots visually reviewed; artifacts are ignored under `test-results/`.
 
@@ -42,6 +42,13 @@ Windows sandbox blocked esbuild ancestor traversal; affected commands ran in the
 No known failing local regression remains at this checkpoint. This is not exhaustive proof of every possible multi-power combination. Explicit interpretations remain in RULES_ASSUMPTIONS.md.
 
 ## Next autonomous step
+
+### U-shaped board and dice presentation — 2026-09-26
+
+- Replaced the serpentine matrix with the supplied image's U silhouette; labeled first corner 12 and second corner 15. Narrow screens retain the U with contained horizontal scrolling.
+- Replaced the turn button copy with Roll die / 擲骰子. Added a pip die, rolling phase, actual result reveal and persistent last-result label. Visible movement waits for the reveal; saved canonical state remains immediate. Rerolls use new recorded events, while Keep and non-dice actions invent no roll.
+- Fast mode/reduced motion skip tumbling. Reload displays the last result without replaying historical events. Pre-race roll-offs do not delay private setup handoffs.
+- Added four browser scenarios across five projects for geometry and presentation ordering. All 60 browser cases validated (59 in the final full run, then the repaired WebKit timing assertion passed separately). Typecheck, lint, 130 unit tests, build and two production-subpath checks passed. The six real-backend checks still require the existing external environment.
 
 ### Visual and Traditional Chinese update — 2026-09-26
 

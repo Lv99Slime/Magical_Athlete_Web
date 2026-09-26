@@ -9,6 +9,152 @@
   --pink: #f4a2be;
   --blue: #80c4cf;
 }
+
+/* A continuous U-shaped board, with the physical corner thresholds visible. */
+.track-viewport {
+  width: 100%;
+  overflow-x: auto;
+  padding: 4px 2px 10px;
+  overscroll-behavior-x: contain;
+}
+.track-viewport:focus-visible {
+  outline: 3px solid #8b2150;
+  outline-offset: 2px;
+}
+.track-grid.u-track {
+  grid-template-columns: repeat(15, minmax(46px, 1fr));
+  grid-template-rows: repeat(4, minmax(84px, auto));
+  min-width: 740px;
+  gap: 3px;
+  padding: 4px;
+  background: transparent;
+}
+.u-track .space {
+  min-height: 84px;
+  padding: 4px;
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+}
+.u-track .first-corner {
+  border-top-right-radius: 28px;
+  border-color: #8b2150;
+}
+.u-track .second-corner {
+  border-bottom-right-radius: 28px;
+  border-color: #8b2150;
+}
+.u-track .start {
+  border-top-left-radius: 28px;
+  border-bottom-left-radius: 28px;
+}
+.u-track .finish {
+  border-top-left-radius: 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.u-track .space-number {
+  font-size: 13px;
+}
+.u-track .space-effect {
+  font-size: 10px;
+}
+.track-infield {
+  grid-column: 2 / 15;
+  grid-row: 2 / 4;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #ede4cfb8;
+  border-radius: 8px;
+}
+.track-infield > strong {
+  font-family: Georgia, serif;
+  font-size: clamp(26px, 3vw, 42px);
+  grid-column: 1;
+  align-self: center;
+}
+.route-direction {
+  font-weight: bold;
+  font-size: 13px;
+  grid-column: 1;
+}
+.corner-labels {
+  grid-column: 2;
+  grid-row: 1 / 4;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: right;
+  font-size: 12px;
+  font-weight: bold;
+  color: #722041;
+}
+.race-layout > div {
+  min-width: 0;
+}
+.dice-reveal {
+  position: sticky;
+  top: 12px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: #f4ecd6;
+  border: 2px solid var(--ink);
+  padding: 16px 22px;
+  margin: 0 0 22px;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.dice-reveal strong {
+  font-size: 20px;
+}
+.dice-reveal p {
+  font-size: 13px;
+  margin: 8px 0 0;
+}
+.dice-cube {
+  flex: 0 0 64px;
+  width: 64px;
+  height: 64px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 4px;
+  padding: 9px;
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  background: #fffdf5;
+  box-shadow: 3px 4px 0 #25241f60;
+}
+.pip {
+  border-radius: 50%;
+  background: transparent;
+}
+.pip.visible {
+  background: var(--ink);
+}
+.is-rolling .dice-cube {
+  animation: dice-tumble 0.22s linear infinite;
+}
+@keyframes dice-tumble {
+  0% {
+    transform: rotate(-18deg) translateY(0);
+  }
+  50% {
+    transform: rotate(18deg) translateY(-9px);
+  }
+  100% {
+    transform: rotate(72deg) translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .is-rolling .dice-cube {
+    animation: none;
+  }
+}
 * {
   box-sizing: border-box;
 }

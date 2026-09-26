@@ -1,6 +1,7 @@
 import { useI18n, translateUiMessage, phaseLabel } from "./i18n";
 import { racerLabel, translateGameText } from "./racerTranslations";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
+import { DiceReveal, useDicePresentation } from "./dicePresentation";
 import {
   applyCommand,
   createGame,
@@ -179,9 +180,23 @@ export function App() {
         throw e;
       }
     });
-  const actor = game ? actorFor(game) : "";
-  const view =
-    screen === "local" && game ? projectState(game, actor) : room?.game;
+  const liveActor = game ? actorFor(game) : "";
+  const liveView = useMemo(
+    () =>
+      screen === "local" && game
+        ? projectState(game, liveActor)
+        : screen === "online"
+          ? room?.game
+          : undefined,
+    [screen, game, liveActor, room?.game],
+  );
+  const presentation = useDicePresentation(
+    liveView ?? undefined,
+    screen === "local" ? liveActor : (room?.playerId ?? ""),
+    fast,
+  );
+  const view = presentation.view;
+  const actor = presentation.viewer;
   return (
     <div className={fast ? "app fast" : "app"}>
       <header className="site-header">
@@ -288,8 +303,16 @@ export function App() {
             </span>
           </div>
           <Scoreboard view={view} />
+          {presentation.dice && (
+            <DiceReveal
+              dice={presentation.dice}
+              view={view}
+              playing={presentation.playing}
+            />
+          )}
           {screen === "local" &&
           curtain &&
+          !presentation.playing &&
           (view.phase === "selection" || view.pending) ? (
             <section className="handoff">
               <div className="sealed-card">
@@ -316,7 +339,7 @@ export function App() {
               key={`${view.phase}-${screen === "local" ? actor : room?.playerId}-${view.raceNumber}`}
               view={view}
               playerId={screen === "local" ? actor : room!.playerId}
-              busy={busy}
+              busy={busy || presentation.playing}
               act={screen === "local" ? localAction : sendOnline}
             />
           )}
@@ -961,17 +984,6 @@ export function GameScreen({
                   ? racerLabel(current.racerId, locale)
                   : t("Race in progress", "比賽進行中")}
               </h2>
-              {view.turn?.face !== undefined && (
-                <span
-                  className="die"
-                  aria-label={t(
-                    `Last die result ${view.turn.face}`,
-                    `上次骰子點數：${view.turn.face}`,
-                  )}
-                >
-                  {view.turn.face}
-                </span>
-              )}
             </div>
             {canRoll ? (
               <button
@@ -979,7 +991,7 @@ export function GameScreen({
                 disabled={busy}
                 onClick={() => act({ type: "roll" })}
               >
-                {t("Take turn", "進行回合")}
+                {t("Roll die", "擲骰子")}
               </button>
             ) : (
               <p>

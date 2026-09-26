@@ -1,6 +1,7 @@
 import { RACERS, SCHEDULE, TRACKS, racerName } from "@magical/engine";
 import type { PlayerView } from "@magical/engine";
 import { useI18n } from "./i18n";
+import { boardCell } from "./boardLayout";
 import {
   racerLabel,
   racerTranslation,
@@ -128,71 +129,90 @@ export function Board({ view }: { view: PlayerView }) {
           )}
         </span>
       </div>
-      <div className="track-grid">
-        {Array.from({ length: 32 }, (_, visual) => {
-          const row = Math.floor(visual / 8);
-          const col = visual % 8;
-          const pos = row % 2 === 0 ? row * 8 + col : row * 8 + 7 - col;
-          if (pos > 30)
-            return (
-              <div key={visual} className="track-spacer" aria-hidden="true" />
-            );
-          const effect = track.specialSpaces.find((s) => s.position === pos);
-          const here = view.racers.filter(
-            (r) =>
-              Math.min(30, r.position) === pos && r.status !== "eliminated",
-          );
-          return (
-            <div
-              key={visual}
-              className={`space ${pos === 0 ? "start" : ""} ${pos === 30 ? "finish" : ""} ${effect?.type ?? ""}`}
-              aria-label={t(
-                `Space ${pos}${effect ? `, ${effect.type}` : ""}`,
-                `第 ${pos} 格${effect ? `，${effect.type === "star" ? "星星" : effect.type === "trip" ? "絆倒" : "箭嘴"}` : ""}`,
-              )}
-            >
-              <span className="space-number">
-                {pos === 0
-                  ? t("START", "起點")
-                  : pos === 30
-                    ? t("FINISH", "終點")
-                    : pos}
+      <div
+        className="track-viewport"
+        tabIndex={0}
+        aria-label={t("Scroll the U-shaped race board", "左右捲動 U 型賽道")}
+      >
+        <div className="track-grid u-track" data-layout="u">
+          <div className="track-infield">
+            <span className="route-direction">
+              {t("Upper straight →", "上排向右 →")}
+            </span>
+            <strong>{trackLabel}</strong>
+            <div className="corner-labels">
+              <span>{t("First corner · 12", "第一彎道 · 第 12 格")}</span>
+              <span>
+                {t(
+                  `Second corner · ${track.secondCornerPosition}`,
+                  `第二彎道 · 第 ${track.secondCornerPosition} 格`,
+                )}
               </span>
-              {effect && (
-                <span className="space-effect">
-                  {effect.type === "star"
-                    ? t("+1 pt", "+1 分")
-                    : effect.type === "trip"
-                      ? t("TRIP", "絆倒")
-                      : `${effect.delta! > 0 ? "+" : ""}${effect.delta}`}
-                </span>
-              )}
-              <div className="tokens">
-                {here.map((r) => (
-                  <div
-                    key={`${r.id}-${r.position}`}
-                    title={`${racerLabel(r.racerId, locale)} · ${view.players.find((p) => p.id === r.ownerId)?.name}${r.tripped ? t(" · Tripped", " · 已絆倒") : ""}`}
-                    className={`token ${travel.get(r.id) === "WARP" ? "warp-arrival" : "move-arrival"} ${view.turn?.racerId === r.id ? "active-token" : ""} ${r.tripped ? "tripped" : ""}`}
-                    style={{
-                      borderColor:
-                        COLORS[
-                          view.players.findIndex((p) => p.id === r.ownerId)
-                        ],
-                    }}
-                  >
-                    <RacerArt id={r.racerId} size={32} />
-                    <span>{shortName(r.racerId)}</span>
-                  </div>
-                ))}
-              </div>
             </div>
-          );
-        })}
+            <span className="route-direction">
+              {t("← Lower straight", "← 下排向左")}
+            </span>
+          </div>
+          {Array.from({ length: 31 }, (_, pos) => {
+            const effect = track.specialSpaces.find((s) => s.position === pos);
+            const here = view.racers.filter(
+              (r) =>
+                Math.min(30, r.position) === pos && r.status !== "eliminated",
+            );
+            return (
+              <div
+                key={pos}
+                data-position={pos}
+                style={boardCell(pos)}
+                className={`space ${pos === 12 ? "first-corner" : ""} ${pos === track.secondCornerPosition ? "second-corner" : ""} ${pos === 0 ? "start" : ""} ${pos === 30 ? "finish" : ""} ${effect?.type ?? ""}`}
+                aria-label={t(
+                  `Space ${pos}${effect ? `, ${effect.type}` : ""}`,
+                  `第 ${pos} 格${effect ? `，${effect.type === "star" ? "星星" : effect.type === "trip" ? "絆倒" : "箭嘴"}` : ""}`,
+                )}
+              >
+                <span className="space-number">
+                  {pos === 0
+                    ? t("START", "起點")
+                    : pos === 30
+                      ? t("FINISH", "終點")
+                      : pos}
+                </span>
+                {effect && (
+                  <span className="space-effect">
+                    {effect.type === "star"
+                      ? t("+1 pt", "+1 分")
+                      : effect.type === "trip"
+                        ? t("TRIP", "絆倒")
+                        : `${effect.delta! > 0 ? "+" : ""}${effect.delta}`}
+                  </span>
+                )}
+                <div className="tokens">
+                  {here.map((r) => (
+                    <div
+                      key={`${r.id}-${r.position}`}
+                      title={`${racerLabel(r.racerId, locale)} · ${view.players.find((p) => p.id === r.ownerId)?.name}${r.tripped ? t(" · Tripped", " · 已絆倒") : ""}`}
+                      className={`token ${travel.get(r.id) === "WARP" ? "warp-arrival" : "move-arrival"} ${view.turn?.racerId === r.id ? "active-token" : ""} ${r.tripped ? "tripped" : ""}`}
+                      style={{
+                        borderColor:
+                          COLORS[
+                            view.players.findIndex((p) => p.id === r.ownerId)
+                          ],
+                      }}
+                    >
+                      <RacerArt id={r.racerId} size={32} />
+                      <span>{shortName(r.racerId)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
       <p className="board-caption">
         {t(
-          "Follow the numbered spaces. A racer’s position and status are also listed below.",
-          "沿格子編號前進。下方亦列出每名賽手的位置與狀態。",
+          "Follow the U: right along the top, down through corners 12 and 15, then left to Finish. Scroll sideways on smaller screens.",
+          "沿 U 型路線前進：上排向右，經第 12、15 格彎道向下，再沿下排向左到終點。小螢幕可左右滑動。",
         )}
       </p>
       <div className="race-roster">

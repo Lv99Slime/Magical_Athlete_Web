@@ -64,4 +64,6 @@ This matrix links real scenarios; it does not claim exhaustive coverage of every
 | Production asset subpath, reload, mobile and console errors | tests/production/subpath.spec.ts | See current execution record |
 # Localization coverage
 
+`tests/e2e/dice-board.spec.ts` checks all 31 logical spaces on the U route, both corners, mobile containment/scrolling, recorded die faces revealed before movement, disabled controls during playback, rerolls, no synthetic roll on Keep, reload without replay and reduced-motion results. It runs in all five browser projects.
+
 `tests/i18n.test.ts` verifies exact coverage of the supplied 36 racer IDs, English identity preservation, movement amount versus finalized die face wording, every current static engine prompt/choice, nickname preservation and event immutability. `tests/e2e/localization.spec.ts` exercises language persistence, the 36 translated cards, ordered selection and saved-game resume. These tests supplement, rather than replace, the existing mechanical tests below.
