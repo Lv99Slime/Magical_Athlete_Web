@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "positionModel": {
+    "start": 0,
+    "finish": 30,
+    "intermediateMin": 1,
+    "intermediateMax": 29,
+    "notes": "Logical positions are independent of the curved visual board. Distance from Start to Finish is 30 movement steps."
+  },
+  "defaultRaceSchedule": [
+    { "race": 1, "trackId": "mild_mile", "firstPoints": 3, "secondPoints": 1 },
+    { "race": 2, "trackId": "wild_wilds", "firstPoints": 4, "secondPoints": 2 },
+    { "race": 3, "trackId": "mild_mile", "firstPoints": 4, "secondPoints": 2 },
+    { "race": 4, "trackId": "wild_wilds", "firstPoints": 5, "secondPoints": 3 }
+  ],
+  "tracks": [
+    {
+      "id": "mild_mile",
+      "name": "Mild Mile",
+      "length": 30,
+      "secondCornerPosition": 15,
+      "specialSpaces": [],
+      "implementationNotes": [
+        "No special track-space effects.",
+        "secondCornerPosition is represented as track metadata for Blimp rather than inferred from SVG geometry. Verify against the owner's physical board if exact corner artwork differs."
+      ]
+    },
+    {
+      "id": "wild_wilds",
+      "name": "Wild Wilds",
+      "length": 30,
+      "secondCornerPosition": 15,
+      "specialSpaces": [
+        { "position": 1, "type": "star", "points": 1 },
+        { "position": 5, "type": "trip" },
+        { "position": 7, "type": "arrow", "delta": 3 },
+        { "position": 11, "type": "arrow", "delta": 1 },
+        { "position": 13, "type": "star", "points": 1 },
+        { "position": 16, "type": "arrow", "delta": -4 },
+        { "position": 18, "type": "trip" },
+        { "position": 23, "type": "arrow", "delta": 2 },
+        { "position": 24, "type": "arrow", "delta": -2 },
+        { "position": 26, "type": "trip" }
+      ],
+      "implementationNotes": [
+        "Arrow movement is a separate MOVE and is never part of the main move.",
+        "Trip space applies trip after the arriving move completes.",
+        "Star grants +1 point on stopping.",
+        "Special-space position mapping is reconstructed from CMYK board design imagery and published counts. If the owner has the physical 2025 board, visually verify these ten positions before treating the graphical map as final.",
+        "Keep track definitions data-driven so a one-position correction requires no engine change."
+      ]
+    }
+  ]
+}

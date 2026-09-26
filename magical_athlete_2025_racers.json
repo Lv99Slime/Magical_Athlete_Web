@@ -1,0 +1,847 @@
+{
+  "schemaVersion": 1,
+  "edition": "CMYK 2025 base game",
+  "rulesBaseline": "2025 base game with August 17, 2026 timing update",
+  "copyrightNote": "Names and mechanical facts are retained for compatibility. UI summaries are paraphrased implementation descriptions, not card-text reproductions.",
+  "racers": [
+    {
+      "id": "alchemist",
+      "name": "Alchemist",
+      "powerName": "TRANSMUTE 'N' SCOOT",
+      "uiSummary": "After the main-move die is finalized as 1 or 2, Alchemist may use 4 as the main-move amount instead.",
+      "timing": [
+        "DIE_FINALIZED",
+        "BEFORE_MAIN_MOVE_RESOLUTION"
+      ],
+      "optional": true,
+      "tags": [
+        "dice",
+        "main-move",
+        "replacement"
+      ],
+      "implementation": [
+        "Keep the finalized die face unchanged; replace only the movement amount.",
+        "Prompt only on finalized 1 or 2."
+      ],
+      "edgeCases": [
+        "A finalized 1 may still matter to die-face reactions; test ordering with Inchworm and Skipper."
+      ]
+    },
+    {
+      "id": "blimp",
+      "name": "Blimp",
+      "powerName": "BLOW IT",
+      "uiSummary": "At turn start, Blimp gets +3 to its main-move amount while it is before the track’s second-corner threshold; on or after that threshold it gets -1 instead.",
+      "timing": [
+        "TURN_STARTED",
+        "MAIN_MOVE_AMOUNT_CALCULATION"
+      ],
+      "optional": false,
+      "tags": [
+        "main-move",
+        "modifier",
+        "track-zone"
+      ],
+      "implementation": [
+        "Read the threshold from track.secondCornerPosition.",
+        "Determine the modifier from Blimp position at the start of the turn."
+      ],
+      "edgeCases": [
+        "Do not infer the corner from screen coordinates."
+      ]
+    },
+    {
+      "id": "coach",
+      "name": "Coach",
+      "powerName": "GOOD HUSTLE",
+      "uiSummary": "Any racer currently sharing Coach’s space gets +1 to its main-move amount, including Coach.",
+      "timing": [
+        "MAIN_MOVE_AMOUNT_CALCULATION"
+      ],
+      "optional": false,
+      "tags": [
+        "aura",
+        "main-move",
+        "modifier"
+      ],
+      "implementation": [
+        "Check settled board state when main-move amount is calculated.",
+        "Coach benefits from its own aura."
+      ],
+      "edgeCases": [
+        "Legs’ fixed 5 is still a main move and is modified by Coach."
+      ]
+    },
+    {
+      "id": "baba_yaga",
+      "name": "Baba Yaga",
+      "powerName": "LEG IT",
+      "uiSummary": "Trip another racer when that racer stops on Baba Yaga’s space, or when Baba Yaga stops on a space occupied by another racer.",
+      "timing": [
+        "RACER_STOPPED",
+        "SPACE_SHARED"
+      ],
+      "optional": false,
+      "tags": [
+        "trip",
+        "stop-trigger",
+        "collision"
+      ],
+      "implementation": [
+        "Evaluate only after an arrival is settled.",
+        "Under the current erratum, suppress stop-together triggers caused only by simultaneous co-arrival."
+      ],
+      "edgeCases": [
+        "Duelist may still be able to duel before/around the resulting trip according to priority.",
+        "Hypnotist can warp Baba Yaga onto its own space, but the Hypnotist is then a trip target unless simultaneous-arrival suppression applies."
+      ]
+    },
+    {
+      "id": "centaur",
+      "name": "Centaur",
+      "powerName": "HOOFWHACK",
+      "uiSummary": "Whenever Centaur passes a racer during a move, that passed racer moves backward 2 spaces, never behind Start.",
+      "timing": [
+        "RACER_PASSED"
+      ],
+      "optional": false,
+      "tags": [
+        "passing",
+        "reaction",
+        "movement"
+      ],
+      "implementation": [
+        "Determine passing from the complete move start/end positions.",
+        "Generate one backward-2 MOVE for each passed racer.",
+        "Clamp at position 0."
+      ],
+      "edgeCases": []
+    },
+    {
+      "id": "copy_cat",
+      "name": "Copy Cat",
+      "powerName": "COPY THAT",
+      "uiSummary": "Copy Cat continuously uses the power of the currently leading active racer. If multiple racers are tied for the lead, Copy Cat chooses one to copy.",
+      "timing": [
+        "STATE_DERIVED",
+        "POWER_LOOKUP"
+      ],
+      "optional": false,
+      "tags": [
+        "copy",
+        "dynamic",
+        "leader"
+      ],
+      "implementation": [
+        "Resolve copied power dynamically from current lead state.",
+        "Never copy a BEFORE_RACE power.",
+        "If a copied power conflicts with the original racer’s same power, the original racer has priority.",
+        "During one indivisible action, do not switch copied source midway merely because the lead tie changes.",
+        "If Copy Cat is the sole leader, do not recursively copy itself; treat it as having no external copied power until another eligible lead source exists."
+      ],
+      "edgeCases": [
+        "A tie-selection prompt may be required when the eligible leader set changes outside an indivisible action."
+      ]
+    },
+    {
+      "id": "banana",
+      "name": "Banana",
+      "powerName": "THE SLIP",
+      "uiSummary": "Any racer that passes Banana during a move becomes tripped after completing that move.",
+      "timing": [
+        "RACER_PASSED",
+        "MOVE_COMPLETED"
+      ],
+      "optional": false,
+      "tags": [
+        "passing",
+        "trip",
+        "reaction"
+      ],
+      "implementation": [
+        "Queue trip after the passing move is completed; never truncate the move."
+      ],
+      "edgeCases": [
+        "Starting on Banana’s space and ending ahead is not a pass because the racer did not start behind Banana."
+      ]
+    },
+    {
+      "id": "cheerleader",
+      "name": "Cheerleader",
+      "powerName": "RAH RAH",
+      "uiSummary": "Before Cheerleader’s main move, it may make every racer currently tied for last move forward 2. If it does, Cheerleader then moves forward 1.",
+      "timing": [
+        "BEFORE_MAIN_MOVE"
+      ],
+      "optional": true,
+      "tags": [
+        "catch-up",
+        "movement",
+        "multi-target"
+      ],
+      "implementation": [
+        "Snapshot the tied-last set when the power is chosen.",
+        "Move all applicable last-place racers by 2 according to the game’s multi-move resolution rules.",
+        "Then perform one separate +1 MOVE for Cheerleader."
+      ],
+      "edgeCases": [
+        "If Cheerleader is itself in last, its +2 and subsequent +1 are two separate moves.",
+        "Only one +1 Cheerleader move occurs regardless of number of last-place racers."
+      ]
+    },
+    {
+      "id": "dicemonger",
+      "name": "Dicemonger",
+      "powerName": "DICEY DEALS",
+      "uiSummary": "Every racer may use one additional reroll of its main-move die per turn. When another racer uses the reroll granted by Dicemonger, Dicemonger moves forward 1 before that racer resolves its movement.",
+      "timing": [
+        "REROLL_REQUESTED",
+        "DIE_REROLLED"
+      ],
+      "optional": true,
+      "tags": [
+        "reroll",
+        "global",
+        "reaction"
+      ],
+      "implementation": [
+        "Track once-per-turn use per racer.",
+        "Tag rerolls with rerollSource.",
+        "Move Dicemonger only when another racer uses rerollSource=dicemonger.",
+        "Resolve Dicemonger’s +1 before the rerolling racer performs its eventual main move."
+      ],
+      "edgeCases": [
+        "Magician’s own POOF rerolls do not themselves make Dicemonger move; a separate Dicemonger-granted reroll does.",
+        "Scoocher reacts to actual power occurrences."
+      ]
+    },
+    {
+      "id": "duelist",
+      "name": "Duelist",
+      "powerName": "DUEL!",
+      "uiSummary": "Whenever another racer is settled on Duelist’s space, Duelist may challenge that racer. Both roll a D6; the higher roll moves forward 2, and Duelist wins ties.",
+      "timing": [
+        "SPACE_SHARED"
+      ],
+      "optional": true,
+      "tags": [
+        "interaction",
+        "dice",
+        "movement"
+      ],
+      "implementation": [
+        "Do not interrupt an indivisible action such as the interval between an accepted die roll and its movement.",
+        "If accepted, roll for Duelist and the chosen shared racer; Duelist wins ties; winner performs a +2 MOVE.",
+        "Allow multiple duels if the trigger arises multiple times."
+      ],
+      "edgeCases": [
+        "Can trigger outside Duelist owner’s normal turn.",
+        "Current simultaneous-arrival erratum can suppress triggers created solely by co-arrival."
+      ]
+    },
+    {
+      "id": "genius",
+      "name": "Genius",
+      "powerName": "THINK GOOD",
+      "uiSummary": "Before rolling for its main move, Genius may predict a die face. If the finalized roll matches, Genius receives another full turn after this one.",
+      "timing": [
+        "BEFORE_MAIN_MOVE",
+        "DIE_FINALIZED",
+        "TURN_ENDED"
+      ],
+      "optional": true,
+      "tags": [
+        "prediction",
+        "extra-turn",
+        "dice"
+      ],
+      "implementation": [
+        "Prompt for either no prediction or a value 1–6 before the roll.",
+        "Compare prediction with final accepted die face after rerolls.",
+        "If correct, enqueue an extra Genius turn immediately after the current turn."
+      ],
+      "edgeCases": []
+    },
+    {
+      "id": "heckler",
+      "name": "Heckler",
+      "powerName": "SCHADENFREUDE",
+      "uiSummary": "Whenever any racer ends its turn no more than 1 track space away from where that racer began the turn, Heckler moves forward 2.",
+      "timing": [
+        "TURN_STARTED",
+        "TURN_ENDED"
+      ],
+      "optional": false,
+      "tags": [
+        "reaction",
+        "turn-delta",
+        "movement"
+      ],
+      "implementation": [
+        "Store each active racer’s position at its turn start.",
+        "At turn end, compare absolute position difference <= 1.",
+        "If condition holds, Heckler performs a +2 MOVE."
+      ],
+      "edgeCases": [
+        "A racer that spends its turn recovering from trip has zero displacement and can trigger Heckler."
+      ]
+    },
+    {
+      "id": "egg",
+      "name": "Egg",
+      "powerName": "SCRAMBLE",
+      "uiSummary": "Before Egg’s race, draw 3 racers from the still-unused racer deck, choose 1, and let Egg use that racer’s powers for this race.",
+      "timing": [
+        "BEFORE_RACE"
+      ],
+      "optional": true,
+      "tags": [
+        "copy",
+        "random-choice",
+        "before-race"
+      ],
+      "implementation": [
+        "Draw three valid undealt/unused racer definitions.",
+        "Prompt Egg owner to choose one.",
+        "Egg keeps Egg identity/token but delegates powers to the chosen racer.",
+        "Copied BEFORE_RACE powers also apply."
+      ],
+      "edgeCases": [
+        "Do not draw racers already drafted, used, or otherwise unavailable according to deck state."
+      ]
+    },
+    {
+      "id": "gunk",
+      "name": "Gunk",
+      "powerName": "GOOP 'EM",
+      "uiSummary": "Every other racer gets -1 to its main-move amount.",
+      "timing": [
+        "MAIN_MOVE_AMOUNT_CALCULATION"
+      ],
+      "optional": false,
+      "tags": [
+        "global",
+        "main-move",
+        "debuff"
+      ],
+      "implementation": [
+        "Reduce movement amount, not die face.",
+        "Clamp an effective amount below zero to zero; a move of zero is not a move."
+      ],
+      "edgeCases": [
+        "A finalized 6 is still a 6 for Lackey even if movement becomes 5.",
+        "Scoocher can react to each application of Gunk’s power as specified by the rules."
+      ]
+    },
+    {
+      "id": "huge_baby",
+      "name": "Huge Baby",
+      "powerName": "REALLY HUGE",
+      "uiSummary": "Outside Start, no other racer may remain on Huge Baby’s space. If an effect would leave another racer there, place that racer on the immediately preceding space instead.",
+      "timing": [
+        "RACER_STOPPED",
+        "SPACE_SHARED",
+        "PLACEMENT_VALIDATION"
+      ],
+      "optional": false,
+      "tags": [
+        "occupancy",
+        "forced-relocation",
+        "passive"
+      ],
+      "implementation": [
+        "Start is exempt.",
+        "Apply the restriction whenever a settled state would illegally share Huge Baby’s non-Start space.",
+        "The relocation behind Huge Baby is not a MOVE; treat the displaced racer as having stopped on that new space."
+      ],
+      "edgeCases": [
+        "Original Huge Baby power takes priority over a conflicting Copy Cat copy.",
+        "Never displace behind position 0."
+      ]
+    },
+    {
+      "id": "flip_flop",
+      "name": "Flip Flop",
+      "powerName": "FLOP FLIP",
+      "uiSummary": "Instead of rolling for its main move, Flip Flop may swap positions simultaneously with any other active racer.",
+      "timing": [
+        "BEFORE_MAIN_MOVE"
+      ],
+      "optional": true,
+      "tags": [
+        "warp",
+        "swap",
+        "main-move-replacement"
+      ],
+      "implementation": [
+        "Prompt: roll normally or choose a swap target.",
+        "If swap chosen, do not roll.",
+        "Warp both racers simultaneously; this is not movement and creates no passing.",
+        "Mark the main move as replaced/consumed."
+      ],
+      "edgeCases": []
+    },
+    {
+      "id": "hare",
+      "name": "Hare",
+      "powerName": "HUBRIS",
+      "uiSummary": "Hare gets +2 to its main-move amount, but if it starts its turn alone in the lead it skips its main move.",
+      "timing": [
+        "TURN_STARTED",
+        "MAIN_MOVE_AMOUNT_CALCULATION"
+      ],
+      "optional": false,
+      "tags": [
+        "main-move",
+        "modifier",
+        "skip"
+      ],
+      "implementation": [
+        "At turn start snapshot whether Hare is alone in lead.",
+        "If yes, skip the main move. Otherwise add +2 to movement amount."
+      ],
+      "edgeCases": []
+    },
+    {
+      "id": "hypnotist",
+      "name": "Hypnotist",
+      "powerName": "HSSSSST",
+      "uiSummary": "Before its main move, Hypnotist may warp any active racer onto Hypnotist’s current space.",
+      "timing": [
+        "BEFORE_MAIN_MOVE"
+      ],
+      "optional": true,
+      "tags": [
+        "warp",
+        "targeting",
+        "control"
+      ],
+      "implementation": [
+        "Prompt for no use or one active racer target.",
+        "Warp target to Hypnotist position.",
+        "Then Hypnotist still proceeds to its main move."
+      ],
+      "edgeCases": []
+    },
+    {
+      "id": "inchworm",
+      "name": "Inchworm",
+      "powerName": "WRIGGLE",
+      "uiSummary": "When another racer’s finalized main-move die is 1, that racer skips the movement and Inchworm moves forward 1.",
+      "timing": [
+        "DIE_FINALIZED"
+      ],
+      "optional": false,
+      "tags": [
+        "die-result",
+        "reaction",
+        "skip-movement"
+      ],
+      "implementation": [
+        "Trigger only after reroll decisions make 1 the final die face.",
+        "Cancel the affected racer’s main-move movement, not its whole turn.",
+        "Inchworm performs +1 MOVE."
+      ],
+      "edgeCases": [
+        "If Skipper is also active, Inchworm moves first, then Skipper takes the next turn."
+      ]
+    },
+    {
+      "id": "legs",
+      "name": "Legs",
+      "powerName": "JOG",
+      "uiSummary": "Instead of rolling, Legs may take a main move with a base movement amount of 5.",
+      "timing": [
+        "BEFORE_MAIN_MOVE"
+      ],
+      "optional": true,
+      "tags": [
+        "main-move",
+        "fixed-move",
+        "roll-replacement"
+      ],
+      "implementation": [
+        "Prompt: roll or use fixed 5.",
+        "Using JOG is still the racer’s main move.",
+        "Apply main-move modifiers such as Gunk and Coach to the base 5."
+      ],
+      "edgeCases": []
+    },
+    {
+      "id": "mastermind",
+      "name": "Mastermind",
+      "powerName": "KNOW-IT-ALL",
+      "uiSummary": "At the start of Mastermind’s first turn in the race, choose a racer predicted to win. If that racer becomes the winner, the race ends immediately and Mastermind receives second place.",
+      "timing": [
+        "TURN_STARTED",
+        "FIRST_PLACE_DETERMINED"
+      ],
+      "optional": false,
+      "tags": [
+        "prediction",
+        "race-end",
+        "scoring"
+      ],
+      "implementation": [
+        "On Mastermind’s first turn only, require a prediction target.",
+        "Watch first-place determination for the predicted racer.",
+        "If prediction is correct, immediately end the race and award Mastermind second place."
+      ],
+      "edgeCases": [
+        "Mastermind may predict itself; the rules permit it to receive both first and second placement outcomes."
+      ]
+    },
+    {
+      "id": "lackey",
+      "name": "Lackey",
+      "powerName": "VERY GOOD SIRE",
+      "uiSummary": "When another racer’s finalized main-move die is 6, Lackey moves forward 2 before that racer performs its main movement.",
+      "timing": [
+        "DIE_FINALIZED",
+        "BEFORE_MAIN_MOVE_RESOLUTION"
+      ],
+      "optional": false,
+      "tags": [
+        "die-result",
+        "reaction",
+        "movement"
+      ],
+      "implementation": [
+        "Trigger only on another racer’s final accepted die face of 6.",
+        "Resolve Lackey +2 MOVE before the rolling racer moves."
+      ],
+      "edgeCases": [
+        "Movement modifiers such as Gunk do not change the die face and therefore do not suppress this trigger."
+      ]
+    },
+    {
+      "id": "loveable_loser",
+      "name": "Loveable Loser",
+      "powerName": "D'AWW",
+      "uiSummary": "Before its main move, if Loveable Loser is alone in last place, its owner gains 1 point.",
+      "timing": [
+        "BEFORE_MAIN_MOVE"
+      ],
+      "optional": false,
+      "tags": [
+        "score",
+        "last-place",
+        "before-main-move"
+      ],
+      "implementation": [
+        "Check alone + last immediately before main-move resolution.",
+        "Award +1 point once per qualifying turn."
+      ],
+      "edgeCases": []
+    },
+    {
+      "id": "mouth",
+      "name": "M.O.U.T.H.",
+      "powerName": "CHOMP",
+      "uiSummary": "When M.O.U.T.H. stops on a space that already contains exactly one other eligible racer, eliminate that racer from the current race.",
+      "timing": [
+        "RACER_STOPPED"
+      ],
+      "optional": false,
+      "tags": [
+        "elimination",
+        "stop-trigger",
+        "collision"
+      ],
+      "implementation": [
+        "Evaluate the settled destination population with simultaneous-arrival metadata.",
+        "If exactly one other racer was already/legally present and the trigger is valid, eliminate it.",
+        "If only one active racer remains, end the race immediately and award the next applicable placement to that survivor."
+      ],
+      "edgeCases": [
+        "Do not trigger solely because M.O.U.T.H. and the victim co-arrived simultaneously under the 2026 timing update.",
+        "If no racer can earn second place, leave those points unawarded."
+      ]
+    },
+    {
+      "id": "leaptoad",
+      "name": "Leaptoad",
+      "powerName": "JUMPFROG",
+      "uiSummary": "During any movement by Leaptoad, occupied track spaces do not count toward the number of spaces moved.",
+      "timing": [
+        "MOVE_STARTED",
+        "MOVE_PATH_CALCULATION"
+      ],
+      "optional": false,
+      "tags": [
+        "movement",
+        "space-skip",
+        "path"
+      ],
+      "implementation": [
+        "Construct movement path by counting only unoccupied positions toward distance.",
+        "Apply in both forward and backward movement.",
+        "Each occupied space skipped is a distinct occurrence of Leaptoad’s power for reaction purposes."
+      ],
+      "edgeCases": [
+        "Scoocher can move once per occupied space Leaptoad skips."
+      ]
+    },
+    {
+      "id": "magician",
+      "name": "Magician",
+      "powerName": "POOF",
+      "uiSummary": "Magician may reroll its main-move die up to two times using its own power, and must accept the last roll it chooses to keep or reaches.",
+      "timing": [
+        "DIE_ROLLED",
+        "REROLL_REQUESTED"
+      ],
+      "optional": true,
+      "tags": [
+        "reroll",
+        "dice-control"
+      ],
+      "implementation": [
+        "After each eligible roll, prompt keep or POOF reroll while fewer than 2 POOF rerolls have been used.",
+        "The final accepted result becomes the finalized die face.",
+        "Each POOF reroll is a Magician power occurrence."
+      ],
+      "edgeCases": [
+        "If Dicemonger is present, track its separate once-per-turn reroll independently from Magician’s two POOF rerolls."
+      ]
+    },
+    {
+      "id": "party_animal",
+      "name": "Party Animal",
+      "powerName": "ANIMAL MAGNETISM",
+      "uiSummary": "Before Party Animal’s main move, every other active racer moves 1 space toward Party Animal. Then Party Animal gets +1 to its main-move amount for each other racer sharing its space.",
+      "timing": [
+        "BEFORE_MAIN_MOVE",
+        "MAIN_MOVE_AMOUNT_CALCULATION"
+      ],
+      "optional": false,
+      "tags": [
+        "simultaneous-movement",
+        "pull",
+        "modifier"
+      ],
+      "implementation": [
+        "Resolve the one-space pulls as one simultaneous movement group.",
+        "A racer already on Party Animal’s space has requested distance 0 toward it and does not perform a move.",
+        "After the group settles and occupancy corrections resolve, count other racers sharing Party Animal’s space and add that count to its main-move amount."
+      ],
+      "edgeCases": [
+        "Under the latest erratum, simultaneous co-arrival from the pull does not itself trigger stop-together powers.",
+        "If Huge Baby is pulled onto the space, resolve Huge Baby occupancy and resulting displacement correctly."
+      ]
+    },
+    {
+      "id": "rocket_scientist",
+      "name": "Rocket Scientist",
+      "powerName": "KABLOOEY",
+      "uiSummary": "After seeing the finalized main-move die, Rocket Scientist may double that movement amount. If it does, Rocket Scientist becomes tripped for its next main move.",
+      "timing": [
+        "DIE_FINALIZED",
+        "BEFORE_MAIN_MOVE_RESOLUTION"
+      ],
+      "optional": true,
+      "tags": [
+        "main-move",
+        "multiplier",
+        "trip",
+        "push-your-luck"
+      ],
+      "implementation": [
+        "Prompt only after the accepted die face is known.",
+        "If chosen, double the relevant base/result movement amount at the correct modifier stage and mark Rocket Scientist tripped.",
+        "The current main move still completes; trip affects the next main move."
+      ],
+      "edgeCases": []
+    },
+    {
+      "id": "sisyphus",
+      "name": "Sisyphus",
+      "powerName": "KEEP ROLLIN'",
+      "uiSummary": "Before the race begins, Sisyphus gains 4 points. Whenever its finalized main-move die is 6, it does not perform that main movement; instead it warps to Start and loses 1 point if it has a point available to lose.",
+      "timing": [
+        "BEFORE_RACE",
+        "DIE_FINALIZED"
+      ],
+      "optional": false,
+      "tags": [
+        "score",
+        "die-result",
+        "warp",
+        "main-move-replacement"
+      ],
+      "implementation": [
+        "Award +4 at BEFORE_RACE.",
+        "On own finalized main-move 6, cancel the main movement, warp to position 0, and subtract 1 from score only if score is above the applicable lower bound/no chip is available.",
+        "Do not perform a main movement after the warp."
+      ],
+      "edgeCases": []
+    },
+    {
+      "id": "romantic",
+      "name": "Romantic",
+      "powerName": "AH, LOVE!",
+      "uiSummary": "When a racer validly stops on a space that already has exactly one other racer, Romantic moves forward 2.",
+      "timing": [
+        "RACER_STOPPED",
+        "SPACE_SHARED"
+      ],
+      "optional": false,
+      "tags": [
+        "reaction",
+        "stop-trigger",
+        "movement"
+      ],
+      "implementation": [
+        "Evaluate after the arriving racer settles.",
+        "Suppress the trigger when the apparent pair was created solely by simultaneous co-arrival under the current erratum.",
+        "If valid, Romantic performs +2 MOVE."
+      ],
+      "edgeCases": [
+        "The old Romantic + Suckerfish simultaneous-arrival combo is intentionally disabled by the 2026 update."
+      ]
+    },
+    {
+      "id": "skipper",
+      "name": "Skipper",
+      "powerName": "SALTY DOG",
+      "uiSummary": "Whenever any racer’s finalized main-move die is 1, Skipper becomes the next racer/player to act in turn order.",
+      "timing": [
+        "DIE_FINALIZED",
+        "TURN_ORDER_OVERRIDE"
+      ],
+      "optional": false,
+      "tags": [
+        "turn-order",
+        "die-result",
+        "interrupt"
+      ],
+      "implementation": [
+        "Trigger only on the final accepted die face 1.",
+        "Schedule Skipper as next after the current turn completes.",
+        "After Skipper’s turn, continue turn order from Skipper’s normal clockwise successor according to current multi-racer rules."
+      ],
+      "edgeCases": [
+        "Skipper rolling 1 can result in Skipper being scheduled again.",
+        "With Inchworm, resolve Inchworm’s +1 reaction before the Skipper turn-order change takes effect."
+      ]
+    },
+    {
+      "id": "scoocher",
+      "name": "Scoocher",
+      "powerName": "SCOOCH SCOOCH",
+      "uiSummary": "Each time another racer’s power actually occurs, Scoocher moves forward 1.",
+      "timing": [
+        "POWER_TRIGGERED"
+      ],
+      "optional": false,
+      "tags": [
+        "reaction",
+        "power-event",
+        "movement"
+      ],
+      "implementation": [
+        "Ignore Scoocher’s own power as a trigger source.",
+        "Generate +1 MOVE for every distinct qualifying power occurrence, not merely once per turn.",
+        "Preserve event lineage for loop detection."
+      ],
+      "edgeCases": [
+        "Gunk can produce one Scoocher reaction per affected main-move debuff occurrence.",
+        "Leaptoad can produce one reaction per occupied space skipped.",
+        "Each Magician POOF reroll is a power occurrence.",
+        "A Dicemonger-granted reroll is a Dicemonger power occurrence."
+      ]
+    },
+    {
+      "id": "stickler",
+      "name": "Stickler",
+      "powerName": "ACTUALLY…",
+      "uiSummary": "While Stickler is active, every other racer may cross Finish by movement only when that movement lands exactly on Finish. If the movement would overshoot, cancel that entire movement.",
+      "timing": [
+        "MOVE_VALIDATION",
+        "FINISH_CROSSING"
+      ],
+      "optional": false,
+      "tags": [
+        "finish-rule",
+        "global",
+        "movement-validation"
+      ],
+      "implementation": [
+        "Apply to all MOVE causes: main, power, track arrow, duel movement, etc.",
+        "Do not apply the restriction to Stickler itself.",
+        "If another racer’s requested movement would end beyond position 30, prevent the entire move and leave the racer at its start position."
+      ],
+      "edgeCases": [
+        "Warp is not a MOVE; target validation should separately prevent nonsensical beyond-finish warp destinations."
+      ]
+    },
+    {
+      "id": "suckerfish",
+      "name": "Suckerfish",
+      "powerName": "SUCKER!",
+      "uiSummary": "When a racer sharing Suckerfish’s space begins a move, Suckerfish may follow that racer and arrive at the mover’s final space as part of the same movement group.",
+      "timing": [
+        "MOVE_STARTED"
+      ],
+      "optional": true,
+      "tags": [
+        "follow",
+        "simultaneous-arrival",
+        "movement"
+      ],
+      "implementation": [
+        "Prompt Suckerfish owner when an eligible co-located racer starts a MOVE.",
+        "If accepted, bind Suckerfish to the carrier for the full move; it cannot stop early.",
+        "Place Suckerfish at the carrier’s final destination with the same simultaneousGroupId.",
+        "Suckerfish can cross Finish this way."
+      ],
+      "edgeCases": [
+        "Current erratum: the carrier and Suckerfish arrive simultaneously, so their pair does not create Romantic/M.O.U.T.H./similar stop-together triggers solely from that co-arrival."
+      ]
+    },
+    {
+      "id": "third_wheel",
+      "name": "Third Wheel",
+      "powerName": "ROLL THROUGH",
+      "uiSummary": "Before its main move, Third Wheel may warp to any track space currently containing exactly two racers, then still takes its normal main move.",
+      "timing": [
+        "BEFORE_MAIN_MOVE"
+      ],
+      "optional": true,
+      "tags": [
+        "warp",
+        "board-state",
+        "targeting"
+      ],
+      "implementation": [
+        "Find all spaces with exactly two settled active racers.",
+        "Prompt no use or one valid destination.",
+        "Warp Third Wheel there, resolve legal stop state, then continue to its main move."
+      ],
+      "edgeCases": []
+    },
+    {
+      "id": "twin",
+      "name": "Twin",
+      "powerName": "DOUBLE DIP",
+      "uiSummary": "Before Twin’s race, it may choose a racer that won an earlier race; Twin uses that winner’s powers during this race.",
+      "timing": [
+        "BEFORE_RACE"
+      ],
+      "optional": true,
+      "tags": [
+        "copy",
+        "history",
+        "before-race"
+      ],
+      "implementation": [
+        "Eligible sources are previous first-place racers from this game.",
+        "Twin keeps Twin identity/token but delegates power implementation to chosen winner.",
+        "Copied BEFORE_RACE powers also execute for Twin."
+      ],
+      "edgeCases": [
+        "Race 1 has no previous winner, so no source is available."
+      ]
+    }
+  ]
+}
