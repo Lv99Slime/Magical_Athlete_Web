@@ -35,7 +35,7 @@ Windows sandbox blocked esbuild ancestor traversal; affected commands ran in the
 ## External acceptance gates
 
 1. **Real backend:** Docker CLI/Desktop and Supabase project settings are absent here. Run `npm run test:backend:ci` on a Docker-enabled host or in committed GitHub CI. It provisions a real stack and runs API plus two-browser tests; missing configuration must fail.
-2. **GitHub:** restore the CLI login with `gh auth login -h github.com`. The principal can then create/configure a remote, push, run CI and publish. No live CI/deployment result is claimed.
+2. **GitHub:** normal-host CLI authentication verified on 2026-10-07. Source uploaded to private `https://github.com/Lv99Slime/Magical_Athlete_Web`, with `main` tracking `origin/main`. The sandbox-only authentication failure does not reflect the host login. Hosted deployment and CI completion remain separately unverified.
 3. **Hosted Supabase:** project access is needed for migration, anonymous Auth/private channels, Edge deployment and hosted room checks. See README_BACKEND.md.
 4. **Source confidence:** verify ten Wild Wilds positions and the corner threshold against a clear official board/owner copy before claiming independent map verification.
 
