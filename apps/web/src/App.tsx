@@ -2,6 +2,9 @@ import { useI18n, translateUiMessage, phaseLabel } from "./i18n";
 import { racerLabel, translateGameText } from "./racerTranslations";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { DiceReveal, useDicePresentation } from "./dicePresentation";
+import { PlaybackFeedback } from "./PlaybackFeedback";
+import { gameAudio } from "./gameAudio";
+import type { PlaybackFrame } from "./racePlayback";
 import {
   applyCommand,
   createGame,
@@ -49,6 +52,32 @@ export function App() {
   const [client, setClient] = useState<OnlineClient>();
   const [room, setRoom] = useState<RoomView>();
   const [fast, setFast] = useState(false);
+  const [sound, setSound] = useState(() => {
+    try {
+      return localStorage.getItem("magical-sound") === "on";
+    } catch {
+      return false;
+    }
+  });
+  const [volume, setVolume] = useState(() => {
+    try {
+      const saved = localStorage.getItem("magical-volume");
+      return saved === null
+        ? 0.35
+        : Math.min(1, Math.max(0, Number(saved) || 0));
+    } catch {
+      return 0.35;
+    }
+  });
+  useEffect(() => {
+    gameAudio.configure(sound, volume);
+    try {
+      localStorage.setItem("magical-sound", sound ? "on" : "off");
+      localStorage.setItem("magical-volume", String(volume));
+    } catch {
+      /* Storage may be disabled. */
+    }
+  }, [sound, volume]);
   const [library, setLibrary] = useState(false);
   useEffect(() => {
     if (!library) return;
@@ -198,7 +227,15 @@ export function App() {
   const view = presentation.view;
   const actor = presentation.viewer;
   return (
-    <div className={fast ? "app fast" : "app"}>
+    <div
+      className={fast ? "app fast" : "app"}
+      onPointerDownCapture={() => {
+        if (sound) gameAudio.unlock();
+      }}
+      onKeyDownCapture={() => {
+        if (sound) gameAudio.unlock();
+      }}
+    >
       <header className="site-header">
         <button
           className="wordmark"
@@ -212,6 +249,34 @@ export function App() {
           <span>ATHLETE</span>
         </button>
         <div className="header-right">
+          <div className="sound-controls">
+            <label>
+              <input
+                type="checkbox"
+                checked={sound}
+                onChange={(e) => {
+                  gameAudio.configure(e.target.checked, volume);
+                  gameAudio.unlock();
+                  setSound(e.target.checked);
+                }}
+              />{" "}
+              {t("Sound effects", "音效")}
+            </label>
+            {sound && (
+              <label>
+                {t("Volume", "音量")}
+                <input
+                  aria-label={t("Volume", "音量")}
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={volume}
+                  onChange={(e) => setVolume(Number(e.target.value))}
+                />
+              </label>
+            )}
+          </div>
           <label className="language-toggle">
             <span>{t("Language", "語言")}</span>
             <select
@@ -303,13 +368,22 @@ export function App() {
             </span>
           </div>
           <Scoreboard view={view} />
-          {presentation.dice && (
-            <DiceReveal
-              dice={presentation.dice}
-              view={view}
-              playing={presentation.playing}
-            />
-          )}
+          <div className="playback-stage">
+            {presentation.dice && (
+              <DiceReveal
+                dice={presentation.dice}
+                view={view}
+                playing={presentation.playing}
+              />
+            )}
+            {presentation.frame && (
+              <PlaybackFeedback
+                frame={presentation.frame}
+                view={view}
+                skip={presentation.skip}
+              />
+            )}
+          </div>
           {screen === "local" &&
           curtain &&
           !presentation.playing &&
@@ -340,6 +414,7 @@ export function App() {
               view={view}
               playerId={screen === "local" ? actor : room!.playerId}
               busy={busy || presentation.playing}
+              playback={presentation.frame}
               act={screen === "local" ? localAction : sendOnline}
             />
           )}
@@ -744,11 +819,13 @@ export function GameScreen({
   playerId,
   busy,
   act,
+  playback,
 }: {
   view: PlayerView;
   playerId: string;
   busy: boolean;
   act: (action: PlayerAction) => void;
+  playback?: PlaybackFrame;
 }) {
   const { t, locale } = useI18n();
 
@@ -1004,7 +1081,7 @@ export function GameScreen({
               </p>
             )}
           </section>
-          <Board view={view} />
+          <Board view={view} playback={playback} />
           {view.error && (
             <div className="error" role="alert">
               {translateGameText(

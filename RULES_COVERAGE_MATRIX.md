@@ -67,3 +67,7 @@ This matrix links real scenarios; it does not claim exhaustive coverage of every
 `tests/e2e/dice-board.spec.ts` checks all 31 logical spaces on the U route, both corners, mobile containment/scrolling, recorded die faces revealed before movement, disabled controls during playback, rerolls, no synthetic roll on Keep, reload without replay and reduced-motion results. It runs in all five browser projects.
 
 `tests/i18n.test.ts` verifies exact coverage of the supplied 36 racer IDs, English identity preservation, movement amount versus finalized die face wording, every current static engine prompt/choice, nickname preservation and event immutability. `tests/e2e/localization.spec.ts` exercises language persistence, the 36 translated cards, ordered selection and saved-game resume. These tests supplement, rather than replace, the existing mechanical tests below.
+
+## Immersive playback coverage — October 2026
+
+All existing 36-racer mechanical coverage remains applicable. `tests/playback.test.ts` covers per-space forward/backward motion, Suckerfish/carrier shared arrival, atomic swaps, group-log deduplication, dice/power/movement order and nonmutation/reload. `tests/audio.test.ts` covers gesture-only initialization, mute/volume, voice cleanup and unavailable audio APIs. `tests/e2e/dice-board.spec.ts` verifies real dice before movement, power spotlight, intermediate spaces, skip/final-save parity, persistent sound settings and reduced motion across desktop/mobile engines. Only structured movement event metadata was added to the rules runtime.

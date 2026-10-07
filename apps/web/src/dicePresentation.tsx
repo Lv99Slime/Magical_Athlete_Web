@@ -2,11 +2,17 @@ import { useLayoutEffect, useEffect, useRef, useState } from "react";
 import type { DomainEvent, PlayerView } from "@magical/engine";
 import { useI18n } from "./i18n";
 import { translateEvent } from "./racerTranslations";
+import { buildPlayback, type PlaybackFrame } from "./racePlayback";
+import { gameAudio } from "./gameAudio";
 
 export type DiceDisplay = { event: DomainEvent; phase: "rolling" | "result" };
 type Snapshot = { view?: PlayerView; viewer: string };
-type Presentation = Snapshot & { dice?: DiceDisplay; playing: boolean };
-type Job = Snapshot & { rolls: DomainEvent[] };
+type Presentation = Snapshot & {
+  dice?: DiceDisplay;
+  playing: boolean;
+  frame?: PlaybackFrame;
+};
+type Job = Snapshot & { frames: PlaybackFrame[] };
 
 export function newDiceEvents(previous: PlayerView, next: PlayerView) {
   return next.events.filter(
@@ -19,7 +25,7 @@ export function newDiceEvents(previous: PlayerView, next: PlayerView) {
   );
 }
 
-/** Canonical state saves immediately; only the projected UI waits for the real dice reveal. */
+/** Save/network state is immediate. Only the projected presentation is queued. */
 export function useDicePresentation(
   live: PlayerView | undefined,
   viewer: string,
@@ -35,35 +41,51 @@ export function useDicePresentation(
   const running = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const lastDie = useRef<DiceDisplay | undefined>(undefined);
-  useEffect(() => () => clearTimeout(timer.current), []);
+  const latest = useRef({ live, viewer });
+  latest.current = { live, viewer };
+  const [reduced, setReduced] = useState(
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const change = () => setReduced(query.matches);
+    query.addEventListener("change", change);
+    return () => {
+      query.removeEventListener("change", change);
+      clearTimeout(timer.current);
+    };
+  }, []);
+  const settle = (view: PlayerView | undefined, owner: string) => {
+    clearTimeout(timer.current);
+    jobs.current = [];
+    running.current = false;
+    const event = view?.events
+      .slice()
+      .reverse()
+      .find((e) => e.type === "DIE_ROLLED" && e.data?.face);
+    lastDie.current = event ? { event, phase: "result" } : undefined;
+    setDisplay({ view, viewer: owner, dice: lastDie.current, playing: false });
+  };
   useLayoutEffect(() => {
     const prior = previous.current;
     previous.current = live;
-    const instant =
-      fast || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (
       !live ||
       !prior ||
       live.version < prior.version ||
       live.raceNumber !== prior.raceNumber ||
-      instant
+      fast ||
+      reduced
     ) {
-      clearTimeout(timer.current);
-      jobs.current = [];
-      running.current = false;
-      const latest =
-        live?.phase === "race"
-          ? [...live.events]
-              .reverse()
-              .find((e) => e.type === "DIE_ROLLED" && e.data?.face)
-          : undefined;
-      lastDie.current = latest ? { event: latest, phase: "result" } : undefined;
-      setDisplay({ view: live, viewer, dice: lastDie.current, playing: false });
+      settle(live, viewer);
       return;
     }
     if (prior === live) return;
-    const rolls = prior.phase === "race" ? newDiceEvents(prior, live) : [];
-    jobs.current.push({ view: live, viewer, rolls });
+    jobs.current.push({
+      view: live,
+      viewer,
+      frames: prior.phase === "race" ? buildPlayback(prior, live) : [],
+    });
     if (running.current) return;
     const pump = () => {
       const job = jobs.current.shift();
@@ -73,9 +95,9 @@ export function useDicePresentation(
       }
       running.current = true;
       let index = 0;
-      const revealNext = () => {
-        const event = job.rolls[index++];
-        if (!event) {
+      const next = () => {
+        const frame = job.frames[index++];
+        if (!frame) {
           setDisplay({
             view: job.view,
             viewer: job.viewer,
@@ -85,26 +107,26 @@ export function useDicePresentation(
           pump();
           return;
         }
+        if (frame.dicePhase)
+          lastDie.current = { event: frame.event, phase: frame.dicePhase };
+        if (frame.cue) gameAudio.play(frame.cue);
         setDisplay((old) => ({
           ...old,
-          dice: { event, phase: "rolling" },
+          view: frame.view,
+          dice: lastDie.current,
           playing: true,
+          frame,
         }));
-        timer.current = setTimeout(() => {
-          lastDie.current = { event, phase: "result" };
-          setDisplay((old) => ({
-            ...old,
-            dice: lastDie.current,
-            playing: true,
-          }));
-          timer.current = setTimeout(revealNext, 550);
-        }, 650);
+        timer.current = setTimeout(next, frame.duration);
       };
-      revealNext();
+      next();
     };
     pump();
-  }, [live, viewer, fast]);
-  return display;
+  }, [live, viewer, fast, reduced]);
+  return {
+    ...display,
+    skip: () => settle(latest.current.live, latest.current.viewer),
+  };
 }
 
 const PIPS: Record<number, number[]> = {

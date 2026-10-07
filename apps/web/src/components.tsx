@@ -2,6 +2,8 @@ import { RACERS, SCHEDULE, TRACKS, racerName } from "@magical/engine";
 import type { PlayerView } from "@magical/engine";
 import { useI18n } from "./i18n";
 import { boardCell } from "./boardLayout";
+import { useEffect, useRef } from "react";
+import type { PlaybackFrame } from "./racePlayback";
 import {
   racerLabel,
   racerTranslation,
@@ -101,8 +103,28 @@ export function RacerCard({
     <article className="racer-card">{body}</article>
   );
 }
-export function Board({ view }: { view: PlayerView }) {
+export function Board({
+  view,
+  playback,
+}: {
+  view: PlayerView;
+  playback?: PlaybackFrame;
+}) {
   const { locale, t } = useI18n();
+  const viewport = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!playback?.movingIds?.length || !viewport.current) return;
+    const r = view.racers.find((r) => r.id === playback.movingIds![0]);
+    const cell = viewport.current.querySelector<HTMLElement>(
+      `[data-position="${r?.position}"]`,
+    );
+    if (!cell) return;
+    const bounds = viewport.current.getBoundingClientRect();
+    const target = cell.getBoundingClientRect();
+    if (target.left < bounds.left || target.right > bounds.right)
+      viewport.current.scrollLeft +=
+        target.left - bounds.left - (bounds.width - target.width) / 2;
+  }, [playback, view.racers]);
   const schedule = SCHEDULE[Math.max(0, view.raceNumber - 1)];
   const track = TRACKS.find((t) => t.id === schedule.trackId)!;
   const trackLabel = t(
@@ -115,6 +137,8 @@ export function Board({ view }: { view: PlayerView }) {
   for (const e of view.events)
     if (e.racerId && (e.type === "MOVE" || e.type === "WARP"))
       travel.set(e.racerId, e.type);
+  for (const id of playback?.movingIds ?? [])
+    travel.set(id, playback!.event.type);
   return (
     <section
       className="board-panel"
@@ -131,6 +155,7 @@ export function Board({ view }: { view: PlayerView }) {
       </div>
       <div
         className="track-viewport"
+        ref={viewport}
         tabIndex={0}
         aria-label={t("Scroll the U-shaped race board", "左右捲動 U 型賽道")}
       >
@@ -190,8 +215,12 @@ export function Board({ view }: { view: PlayerView }) {
                   {here.map((r) => (
                     <div
                       key={`${r.id}-${r.position}`}
+                      data-racer-id={r.id}
+                      data-moving={
+                        playback?.movingIds?.includes(r.id) || undefined
+                      }
                       title={`${racerLabel(r.racerId, locale)} · ${view.players.find((p) => p.id === r.ownerId)?.name}${r.tripped ? t(" · Tripped", " · 已絆倒") : ""}`}
-                      className={`token ${travel.get(r.id) === "WARP" ? "warp-arrival" : "move-arrival"} ${view.turn?.racerId === r.id ? "active-token" : ""} ${r.tripped ? "tripped" : ""}`}
+                      className={`token ${travel.get(r.id) === "WARP" ? "warp-arrival" : "move-arrival"} ${view.turn?.racerId === r.id ? "active-token" : ""} ${playback?.event.type === "POWER_TRIGGERED" && playback.event.racerId === r.id ? "power-token" : ""} ${r.tripped ? "tripped" : ""}`}
                       style={{
                         borderColor:
                           COLORS[

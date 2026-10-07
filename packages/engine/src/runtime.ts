@@ -589,6 +589,12 @@ export class Runtime {
           "WARP",
           `${this.name(a.id)} and ${this.name(b.id)} swap.`,
           a.id,
+          {
+            arrivals: [
+              { id: a.id, from: pa, to: pb },
+              { id: b.id, from: pb, to: pa },
+            ],
+          },
         );
         this.push({
           kind: "arrivals",
@@ -754,7 +760,7 @@ export class Runtime {
       "MOVE",
       `${this.name(r.id)} moves ${f.delta > 0 ? "+" : ""}${f.delta}: ${arrivals[0].from} → ${arrivals[0].to}.`,
       r.id,
-      { cause: f.cause, from: arrivals[0].from, to: arrivals[0].to },
+      { cause: f.cause, from: arrivals[0].from, to: arrivals[0].to, arrivals },
     );
     const frames: ResolutionFrame[] = [];
     for (const a of arrivals)
@@ -815,6 +821,12 @@ export class Runtime {
         "MOVE",
         `${this.name(a.id)} moves with the group: ${a.from} → ${a.to}.`,
         a.id,
+        {
+          from: a.from,
+          to: a.to,
+          arrivals,
+          groupId: `group-${this.s.eventCounter - arrivals.indexOf(a) + 1}`,
+        },
       );
       for (const b of before)
         if (

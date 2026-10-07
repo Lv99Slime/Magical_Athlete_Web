@@ -35,3 +35,9 @@ Implemented the supplied reference's U-shaped route and explicit corner labels, 
 - Delivered: persistent bilingual UI, all 36 translated racer descriptions, original generated board scenery, narrow-screen layout fixes.
 - Acceptance: locale switching preserves the current match and ordered choices; all current static rule prompts are translated; player nicknames and replay records remain unchanged; desktop/mobile deployment paths resolve the image asset.
 - Delivered: all 36 generated character portraits as six visually reviewed sprite sheets, integrated across cards, guide, home, roster and board tokens. WebP encoding reduces the seven-artwork download to about 2.27 MB.
+
+## Immersive race playback — October 2026
+
+Sequence projected events into dice, per-space movement, power spotlight and short synthesized audio. Canonical engine/network/save state stays immediate. Enrich movement logs with structured simultaneous arrivals (including swaps and followers); do not alter mechanics. Preserve event order, provide skip/fast/reduced-motion, persist opt-in sound/volume, and validate intermediate positions, simultaneous groups, warp, reload and final-state parity before acceptance.
+
+Delivered this follow-up: recorded-event movement, power spotlights and opt-in synthesized sound; full 65-case browser regression and both production-subpath checks passed. All five project control files updated; gameplay interpretations unchanged.

@@ -59,3 +59,12 @@ No known failing local regression remains at this checkpoint. This is not exhaus
 
 
 When access is available, run the real-backend gate, fix integration failures, deploy matching backend/frontend, perform hosted multi-browser/reconnect/privacy checks and update this record before closing the Definition of Done. The owner has no routine architecture or agent-coordination task.
+
+## Immersive playback delivered — 2026-10-07
+
+- Added sequential per-space forward/backward playback, direct warp/swap effects, simultaneous group/follower arrival, horizontal mobile follow and role/power spotlights with original portraits and bilingual explanations.
+- Added seven locally synthesized sound cues, opt-in sound, persistent volume/mute, gesture unlock, bounded voices and safe handling of unavailable audio. Fast/reduced-motion and per-action Skip reveal current canonical state immediately.
+- Runtime changes are structured movement event metadata only; no racer mechanics or track coordinates changed. Canonical persistence and network resolution remain immediate. Independent review identified and resolved the second participant's swap styling.
+- Verification: typecheck/lint/build and backend shared-engine bundle passed. Full browser run: 65/65 passed across Chromium, Firefox, WebKit, tablet and mobile, including four-race completion. Production-subpath desktop/mobile: 2/2 passed. Desktop/mobile power-playback screenshots visually reviewed under ignored output/screenshots/.
+- Final full unit regression: 139 passed; 6 environment-dependent backend checks skipped. Includes unequal-distance simultaneous arrival and withholding dice results from the log during tumbling.
+- External hosted multiplayer/deployment gates above remain outside this presentation change; no hosted verification is claimed.

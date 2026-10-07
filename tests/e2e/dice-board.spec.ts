@@ -124,7 +124,7 @@ test("U route has physical corners, continuous positions and a contained mobile 
 
 test("real die is revealed before tokens move; result persists and reload does not replay", async ({
   page,
-}) => {
+}, testInfo) => {
   const state = await loadFixture(page);
   const current = state.racers.find(
     (r: { id: string }) => r.id === state.turn!.racerId,
@@ -150,7 +150,21 @@ test("real die is revealed before tokens move; result persists and reload does n
   await expect(page.locator(".dice-cube")).toHaveAttribute("data-face", "4");
   expect(await position()).toBe("0");
   await page.clock.runFor(550);
-  await expect.poll(async () => Number(await position())).toBeGreaterThan(0);
+  await expect(page.locator(".power-spotlight")).toBeVisible();
+  if (["chromium", "mobile"].includes(testInfo.project.name))
+    await page.screenshot({
+      path: `output/screenshots/power-playback-${testInfo.project.name}.png`,
+      fullPage: true,
+    });
+  expect(await position()).toBe("0");
+  await page.clock.runFor(750);
+  await expect.poll(position).toBe("1");
+  await page.clock.runFor(180);
+  await expect.poll(position).toBe("2");
+  await page.clock.runFor(1000);
+  await expect(
+    page.getByRole("button", { name: "Skip animation" }),
+  ).toHaveCount(0);
   await expect(page.locator(".dice-cube")).toHaveAttribute("data-face", "4");
   await page.reload();
   await page.getByRole("button", { name: /Resume saved game/ }).click();
@@ -176,6 +190,8 @@ test("rerolls reveal separately; keeping a die introduces no fake roll", async (
     .locator(".dice-reveal")
     .getAttribute("data-event-id");
   await page.getByRole("button", { name: /POOF reroll/ }).click();
+  await expect(page.locator(".power-spotlight")).toBeVisible();
+  await page.clock.runFor(750);
   await expect(page.locator(".dice-reveal")).toHaveAttribute(
     "data-phase",
     "rolling",
@@ -194,6 +210,51 @@ test("rerolls reveal separately; keeping a die introduces no fake roll", async (
     "data-phase",
     "result",
   );
+});
+
+test("sound preference persists and skip commits the saved result without replay", async ({
+  page,
+}) => {
+  await loadFixture(page);
+  const sound = page.getByRole("checkbox", { name: "Sound effects" });
+  await expect(sound).not.toBeChecked();
+  await sound.check();
+  await expect(page.getByRole("slider", { name: "Volume" })).toBeVisible();
+  await page.getByRole("slider", { name: "Volume" }).fill("0.2");
+  const clockTime = new Date("2026-10-07T00:00:00Z");
+  await page.clock.install({ time: clockTime });
+  await page.clock.pauseAt(new Date(clockTime.getTime() + 1000));
+  await page.getByRole("button", { name: "Roll die", exact: true }).click();
+  await page.getByRole("button", { name: "Skip animation" }).click();
+  await expect(page.locator(".dice-reveal")).toHaveAttribute(
+    "data-phase",
+    "result",
+  );
+  await expect(page.locator(".playback-feedback")).toHaveCount(0);
+  const positions = await page
+    .locator(".u-track [data-racer-id]")
+    .evaluateAll((nodes) =>
+      nodes.map((n) => [
+        n.getAttribute("data-racer-id"),
+        n.closest("[data-position]")!.getAttribute("data-position"),
+      ]),
+    );
+  await page.reload();
+  await expect(sound).toBeChecked();
+  await expect(page.getByRole("slider", { name: "Volume" })).toHaveValue("0.2");
+  await page.getByRole("button", { name: /Resume saved game/ }).click();
+  expect(
+    await page
+      .locator(".u-track [data-racer-id]")
+      .evaluateAll((nodes) =>
+        nodes.map((n) => [
+          n.getAttribute("data-racer-id"),
+          n.closest("[data-position]")!.getAttribute("data-position"),
+        ]),
+      ),
+  ).toEqual(positions);
+  await sound.uncheck();
+  await expect(page.getByRole("slider", { name: "Volume" })).toHaveCount(0);
 });
 
 test("reduced motion skips tumbling and still shows the authoritative result", async ({

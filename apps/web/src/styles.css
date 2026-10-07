@@ -1458,3 +1458,134 @@ html[lang="zh-Hant"] .hero-copy {
     font-size: 45px;
   }
 }
+
+/* Printed action cards keep movement and power causes readable during playback. */
+.sound-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.sound-controls label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+.sound-controls input[type="range"] {
+  width: 80px;
+  min-height: 44px;
+}
+.playback-feedback {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  margin: 14px 0;
+  border: 3px solid var(--ink);
+  background: #ede4cf;
+  box-shadow: 4px 4px 0 var(--ink);
+  min-height: 98px;
+}
+.playback-copy {
+  flex: 1;
+  min-width: 0;
+}
+.playback-copy strong {
+  display: block;
+  font-size: 20px;
+}
+.playback-copy small {
+  font-family: Courier, monospace;
+}
+.playback-copy p {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+.playback-copy .power-explanation {
+  font-size: 13px;
+}
+.power-spotlight {
+  background: #e8e0c0;
+  border-left: 12px solid #f4a2be;
+}
+.power-spotlight .racer-art {
+  transform: rotate(-6deg);
+  box-shadow: 4px 4px 0 #80c4cf;
+}
+.power-token {
+  outline: 4px solid #f4a2be;
+  box-shadow: 0 0 0 7px #e8e0c0;
+}
+.token[data-moving="true"].move-arrival {
+  animation: step-hop 180ms ease-out;
+}
+@keyframes step-hop {
+  from {
+    transform: translateY(-9px) rotate(-8deg);
+  }
+  to {
+    transform: translateY(0) rotate(0);
+  }
+}
+@media (max-width: 600px) {
+  .playback-feedback {
+    padding: 10px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .playback-copy strong {
+    font-size: 17px;
+  }
+  .playback-feedback > button {
+    margin-left: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .token[data-moving="true"].move-arrival {
+    animation: none;
+  }
+}
+.playback-stage {
+  position: sticky;
+  top: 8px;
+  z-index: 6;
+}
+.playback-stage .dice-reveal {
+  position: static;
+  margin-bottom: 8px;
+}
+.playback-stage .playback-feedback {
+  margin-top: 8px;
+}
+.dice-playback-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+.dice-playback-controls button {
+  background: #ede4cf;
+  border: 1px solid var(--ink);
+  padding: 8px 14px;
+}
+@media (max-width: 600px) {
+  .playback-feedback {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+  .playback-feedback > button {
+    grid-column: 2;
+    justify-self: end;
+  }
+  .playback-copy .power-explanation {
+    line-height: 1.35;
+  }
+  .playback-stage .dice-reveal {
+    padding: 8px 12px;
+    gap: 12px;
+  }
+  .playback-stage .dice-reveal p {
+    margin: 4px 0;
+  }
+}
