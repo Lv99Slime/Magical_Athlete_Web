@@ -41,3 +41,7 @@ Implemented the supplied reference's U-shaped route and explicit corner labels, 
 Sequence projected events into dice, per-space movement, power spotlight and short synthesized audio. Canonical engine/network/save state stays immediate. Enrich movement logs with structured simultaneous arrivals (including swaps and followers); do not alter mechanics. Preserve event order, provide skip/fast/reduced-motion, persist opt-in sound/volume, and validate intermediate positions, simultaneous groups, warp, reload and final-state parity before acceptance.
 
 Delivered this follow-up: recorded-event movement, power spotlights and opt-in synthesized sound; full 65-case browser regression and both production-subpath checks passed. All five project control files updated; gameplay interpretations unchanged.
+
+## Local-only hosted release — 2026-10-10
+
+The owner approved public GitHub source and a GitHub Pages release for same-device play, deferring Supabase setup. Release scope is the full local game (all original racers/rules, Traditional Chinese, saves, playback and sound). The application CI gates remain mandatory; unconfigured multiplayer is explicitly skipped for this release and remains a separate milestone, not a claimed success.

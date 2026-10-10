@@ -1,8 +1,12 @@
-# Magical Athlete — private online edition
+# Magical Athlete — web edition
 
 A browser game for local pass-and-play and private online rooms, based on the supplied **CMYK 2025** gameplay references, including the recorded August 2026 simultaneous-arrival correction. The original 36 racer identities and mechanics are the implementation target; the visual assets are original project artwork.
 
 Consult [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and [RULES_COVERAGE_MATRIX.md](RULES_COVERAGE_MATRIX.md) for the current verification record. A successful build alone does not establish complete rules fidelity or a working hosted multiplayer deployment.
+
+## Play the hosted game
+
+[Open Magical Athlete](https://lv99slime.github.io/Magical_Athlete_Web/) — same-device pass-and-play, published 2026-10-10. Online rooms are not configured. Local saves belong to the browser and site origin; a localhost save does not automatically transfer to this URL.
 
 ## Run locally
 
@@ -17,7 +21,7 @@ Open the URL printed by Vite. No Supabase account, Docker installation, or envir
 
 Choose two to six players and enter names. Draft your teams, or explicitly choose the simpler random-team option. During private choices, hand the device to the named player before revealing their controls. Two-player games use two ordered racers per player; the supported three-player double-racer option is available in setup. Complete four alternating Mild Mile/Wild Wilds races, then compare final scores. Tied leaders share victory.
 
-Use **Take turn** and the displayed power/target decisions to play. Open **Racer guide** to read all powers. The race log explains automatic effects. Local games are saved on this browser; **Resume saved game** restores the saved game. Clearing site data removes that save. Pass-and-play privacy relies on handing over the device; it is not a security boundary against someone inspecting browser storage.
+Use **Roll die** and the displayed power/target decisions to play. Open **Racer guide** to read all powers. The race log explains automatic effects. Local games are saved on this browser; **Resume saved game** restores the saved game. Clearing site data removes that save. Pass-and-play privacy relies on handing over the device; it is not a security boundary against someone inspecting browser storage.
 
 ## Check the project
 
@@ -41,7 +45,7 @@ npm run test:backend:ci
 
 That command provisions a disposable local backend, applies SQL, bundles the shared engine, serves the authenticated endpoint, and runs real Auth/database/concurrency/Realtime/privacy tests. It fails if the backend does not start. Running ordinary `npm test` without backend variables intentionally skips network tests; that is not multiplayer verification.
 
-Current local evidence: 126 passing unit/integration tests, 20 browser/device journeys and two production-subpath checks. Six real-backend tests and the dedicated online journey await a configured service. The supplied Wild Wilds coordinates remain provisional pending official/physical board verification.
+Current local evidence: 139 passing unit tests, 65 browser/device journeys and two production-subpath checks. Six real-backend tests and the dedicated online journey await a configured service. The supplied Wild Wilds coordinates remain provisional pending official/physical board verification.
 
 ## Online rooms
 
@@ -65,7 +69,7 @@ Reloading on the same browser restores the anonymous identity. Clearing browser 
 1. Push the project, including `package-lock.json`, to a GitHub repository on `main` or `master`.
 2. In repository **Settings → Pages**, select **GitHub Actions** as the source.
 3. For online play, provision/deploy the backend from the same source revision first. Add repository Actions **variables** `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. Leave both absent for a local-only site. Never add privileged backend credentials to frontend variables.
-4. Push or manually run **Deploy GitHub Pages**. Its reusable verification workflow must pass unit/build/browser checks **and real Docker-backed multiplayer tests** before an artifact can deploy.
+4. Push or manually run **Deploy GitHub Pages**. Its reusable verification workflow must pass type/lint/unit/build/browser checks before an artifact can deploy. Local-only releases explicitly skip the unconfigured multiplayer gate; builds with `VITE_SUPABASE_URL` also require real Docker-backed multiplayer tests.
 5. Open the deployment URL shown in Actions. Test both local play and, when configured, a room in separate browsers before inviting friends.
 
 Vite uses relative asset paths, so GitHub user sites and repository subpaths both work. Room invitations use a query parameter on the existing page rather than requiring server-side route rewrites. Frontend deployment does not deploy or migrate the external backend; follow its setup instructions when changing engine/backend code.
