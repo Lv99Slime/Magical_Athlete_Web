@@ -15,6 +15,9 @@ concurrency:
 jobs:
   verify:
     uses: ./.github/workflows/ci.yml
+    with:
+      # Local-only releases pass all application gates. Online builds also require Supabase.
+      verify_multiplayer: ${{ vars.VITE_SUPABASE_URL != '' }}
 
   build:
     needs: verify

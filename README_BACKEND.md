@@ -36,3 +36,7 @@ Clearing site data, signing out, or moving to another device loses an anonymous 
 Secret choices and future random/deck state are projected out on the server. A private channel does not make shared payloads player-private, so only version hints are broadcast. JWT subscription permission can remain cached, but state reads and commands recheck membership. No private snapshots enter browser Data API tables or shared broadcasts.
 
 Local pass-and-play remains fully available without any Supabase configuration. No backend provisioning or live verification is implied by a successful frontend build.
+
+## Local-only Pages release
+
+When `VITE_SUPABASE_URL` is not configured, Pages publishes the same-device game after all application checks (types, lint, unit tests, full browser journeys and production-subpath tests). The Supabase integration job is skipped explicitly for that release; this is not multiplayer acceptance. Setting the backend URL enables the additional real-backend gate. Pull requests and a default manual Verify run continue to test multiplayer. The October 2026 local-only release was explicitly selected by the owner.

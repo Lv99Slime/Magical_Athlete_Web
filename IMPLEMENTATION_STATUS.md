@@ -68,3 +68,7 @@ When access is available, run the real-backend gate, fix integration failures, d
 - Verification: typecheck/lint/build and backend shared-engine bundle passed. Full browser run: 65/65 passed across Chromium, Firefox, WebKit, tablet and mobile, including four-race completion. Production-subpath desktop/mobile: 2/2 passed. Desktop/mobile power-playback screenshots visually reviewed under ignored output/screenshots/.
 - Final full unit regression: 139 passed; 6 environment-dependent backend checks skipped. Includes unequal-distance simultaneous arrival and withholding dice results from the log during tumbling.
 - External hosted multiplayer/deployment gates above remain outside this presentation change; no hosted verification is claimed.
+
+## Deployment checkpoint — 2026-10-10
+
+Owner explicitly approved making `Lv99Slime/Magical_Athlete_Web` public for GitHub Pages and selected local/pass-and-play deployment without Supabase. Pages is enabled with Actions and HTTPS at https://lv99slime.github.io/Magical_Athlete_Web/. Initial setup-cli failure was an unauthenticated GitHub latest-release rate limit; the workflow now uses official setup-cli v3 with fixed CLI 2.120.0, and installation succeeded on the runner. Local-only releases retain all application verification gates and explicitly skip the unconfigured multiplayer gate; PR/manual verification still defaults to real Supabase tests. Hosted verification is pending deployment completion.

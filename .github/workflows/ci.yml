@@ -3,7 +3,16 @@ name: Verify
 on:
   pull_request:
   workflow_dispatch:
+    inputs:
+      verify_multiplayer:
+        description: Run the real Supabase integration suite
+        type: boolean
+        default: true
   workflow_call:
+    inputs:
+      verify_multiplayer:
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -36,6 +45,7 @@ jobs:
           retention-days: 7
 
   multiplayer:
+    if: github.event_name == 'pull_request' || inputs.verify_multiplayer
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
