@@ -44,13 +44,15 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
+        id: supabase
         with:
-          version: latest
+          # Fixed npm release: avoid the unauthenticated GitHub latest-release lookup.
+          version: 2.120.0
       - run: npm ci
       # This provisions a real local Auth/Postgres/Realtime/Edge stack with Docker.
       # The runner asserts both test variables, so a skipped network suite cannot pass this gate.
       - run: npm run test:backend:ci
       - name: Stop backend after failure or cancellation
-        if: always()
+        if: always() && steps.supabase.outcome == 'success'
         run: supabase stop --no-backup
