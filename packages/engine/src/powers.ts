@@ -20,9 +20,12 @@ const yesNo = [
   { id: "yes", label: "Use power" },
   { id: "no", label: "Pass" },
 ];
-const otherOptions = (c: Runtime, _r: RacerInstance) => [
+/** Other active racers not already on this racer's space; the racer itself is never a target. */
+const otherOptions = (c: Runtime, r: RacerInstance) => [
   { id: "no", label: "Pass" },
-  ...c.active.map((x) => ({ id: x.id, label: racerName(x.racerId) })),
+  ...c.active
+    .filter((x) => x.id !== r.id && x.position !== r.position)
+    .map((x) => ({ id: x.id, label: racerName(x.racerId) })),
 ];
 function optional(
   c: Runtime,
@@ -288,13 +291,15 @@ export const powers: Record<string, Ability> = {
   hypnotist: {
     on: {
       beforeMain: (c, r, d) => {
-        if (own(r, d))
+        if (!own(r, d)) return;
+        const options = otherOptions(c, r);
+        if (options.length > 1)
           optional(
             c,
             r,
             "hypnotist",
             "Warp another racer onto your space?",
-            otherOptions(c, r),
+            options,
           );
       },
     },

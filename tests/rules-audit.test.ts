@@ -65,15 +65,27 @@ describe("independent rules audit regressions", () => {
     expect(c.s.pending?.kind).toBe("reroll");
   });
 
-  it("Hypnotist may target any active racer, including itself", () => {
-    const c = fixture(["hypnotist", "legs", "banana"], [13, 4, 8]);
+  it("Hypnotist targets other racers elsewhere, never itself or racers already sharing its space", () => {
+    const c = fixture(["hypnotist", "legs", "banana"], [13, 4, 13]);
     c.push({
       kind: "trigger",
       timing: "beforeMain",
       data: { racerId: "hypnotist" },
     });
     c.resolve();
-    expect(c.s.pending?.options.map((o) => o.id)).toContain("hypnotist");
+    const ids = c.s.pending?.options.map((o) => o.id);
+    expect(ids).toEqual(["no", "legs"]);
+  });
+
+  it("Hypnotist is not asked when every other racer already shares its space", () => {
+    const c = fixture(["hypnotist", "legs", "banana"], [0, 0, 0]);
+    c.push({
+      kind: "trigger",
+      timing: "beforeMain",
+      data: { racerId: "hypnotist" },
+    });
+    c.resolve();
+    expect(c.s.pending).toBeUndefined();
   });
 
   it("co-arriving pair does not trigger Romantic while an existing occupant still does", () => {

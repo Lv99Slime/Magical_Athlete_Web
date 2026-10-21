@@ -1,8 +1,7 @@
 import { useI18n, translateUiMessage, phaseLabel } from "./i18n";
 import { racerLabel, translateGameText } from "./racerTranslations";
 import { useEffect, useRef, useState, useMemo } from "react";
-import { DiceReveal, useDicePresentation } from "./dicePresentation";
-import { PlaybackFeedback } from "./PlaybackFeedback";
+import { useDicePresentation } from "./dicePresentation";
 import { gameAudio } from "./gameAudio";
 import type { PlaybackFrame } from "./racePlayback";
 import {
@@ -13,7 +12,16 @@ import {
   SCHEDULE,
 } from "@magical/engine";
 import type { GameState, PlayerAction, PlayerView } from "@magical/engine";
-import { Board, EventLog, RacerArt, RacerCard, Scoreboard } from "./components";
+import {
+  Board,
+  EventLog,
+  RaceRoster,
+  RacerArt,
+  RacerCard,
+  Scoreboard,
+} from "./components";
+import { TurnConsole } from "./TurnConsole";
+import { DecisionPanel } from "./DecisionPanel";
 import { loadGame, saveGame } from "./storage";
 import {
   connectOnline,
@@ -226,6 +234,12 @@ export function App() {
   );
   const view = presentation.view;
   const actor = presentation.viewer;
+  const curtainShowing =
+    screen === "local" &&
+    curtain &&
+    !presentation.playing &&
+    !!view &&
+    (view.phase === "selection" || !!view.pending);
   return (
     <div
       className={fast ? "app fast" : "app"}
@@ -250,7 +264,7 @@ export function App() {
         </button>
         <div className="header-right">
           <div className="sound-controls">
-            <label>
+            <label className="toggle">
               <input
                 type="checkbox"
                 checked={sound}
@@ -259,8 +273,9 @@ export function App() {
                   gameAudio.unlock();
                   setSound(e.target.checked);
                 }}
-              />{" "}
-              {t("Sound effects", "音效")}
+              />
+              <span className="toggle-track" aria-hidden="true" />
+              <span>{t("Sound effects", "音效")}</span>
             </label>
             {sound && (
               <label>
@@ -299,13 +314,14 @@ export function App() {
             {t("Racer guide", "選手圖鑑")}
           </button>
           {screen !== "home" && (
-            <label className="fast-toggle">
+            <label className="toggle fast-toggle">
               <input
                 type="checkbox"
                 checked={fast}
                 onChange={(e) => setFast(e.target.checked)}
-              />{" "}
-              {t("Fast animations", "快速動畫")}
+              />
+              <span className="toggle-track" aria-hidden="true" />
+              <span>{t("Fast animations", "快速動畫")}</span>
             </label>
           )}
         </div>
@@ -328,6 +344,16 @@ export function App() {
             setScreen("local");
           }}
           onStart={(names, doubleRacers, randomTeams) => {
+            if (
+              saved &&
+              !window.confirm(
+                t(
+                  "Starting a new game replaces the game saved on this device. Continue?",
+                  "開始新遊戲會覆蓋此裝置上的存檔，確定要繼續？",
+                ),
+              )
+            )
+              return;
             try {
               persist(createGame({ names, doubleRacers, randomTeams }, random));
               setCurtain(true);
@@ -367,27 +393,25 @@ export function App() {
                 : t(`Room ${room?.code}`, `房間 ${room?.code}`)}
             </span>
           </div>
-          <Scoreboard view={view} />
-          <div className="playback-stage">
-            {presentation.dice && (
-              <DiceReveal
-                dice={presentation.dice}
-                view={view}
-                playing={presentation.playing}
-              />
-            )}
-            {presentation.frame && (
-              <PlaybackFeedback
-                frame={presentation.frame}
-                view={view}
-                skip={presentation.skip}
-              />
-            )}
-          </div>
-          {screen === "local" &&
-          curtain &&
-          !presentation.playing &&
-          (view.phase === "selection" || view.pending) ? (
+          <Scoreboard
+            view={view}
+            currentPlayerId={
+              view.racers.find((r) => r.id === view.turn?.racerId)?.ownerId
+            }
+          />
+          {view.phase === "race" && (
+            <TurnConsole
+              view={view}
+              dice={presentation.dice}
+              frame={presentation.frame}
+              playing={presentation.playing}
+              skip={presentation.skip}
+              busy={busy || presentation.playing}
+              canAct={!curtainShowing}
+              act={screen === "local" ? localAction : sendOnline}
+            />
+          )}
+          {curtainShowing ? (
             <section className="handoff">
               <div className="sealed-card">
                 <span>{t("Private choice", "秘密選擇")}</span>
@@ -832,8 +856,6 @@ export function GameScreen({
   const [selected, setSelected] = useState<string[]>([]);
   const me = view.players.find((p) => p.id === playerId)!;
   const count = view.config.doubleRacers ? 2 : 1;
-  const current = view.racers.find((r) => r.id === view.turn?.racerId);
-  const canRoll = view.legalActions.some((a) => a.type === "roll");
   const toggle = (id: string) =>
     setSelected((old) =>
       old.includes(id)
@@ -842,33 +864,9 @@ export function GameScreen({
           ? [...old, id]
           : old,
     );
-  const decision =
-    view.pending && view.pending.ownerId === playerId ? (
-      <section className="decision" aria-live="polite">
-        <p className="eyebrow">
-          {me.name}
-          {t(" · Power decision", " · 能力選擇")}
-        </p>
-        <h2>{translateGameText(view.pending.prompt, locale)}</h2>
-        <div className="button-row">
-          {view.pending.options.map((o) => (
-            <button
-              key={o.id}
-              disabled={busy}
-              onClick={() =>
-                act({
-                  type: "choose",
-                  decisionId: view.pending!.id,
-                  optionId: o.id,
-                })
-              }
-            >
-              {translateGameText(o.label, locale)}
-            </button>
-          ))}
-        </div>
-      </section>
-    ) : null;
+  const decision = (
+    <DecisionPanel view={view} playerId={playerId} busy={busy} act={act} />
+  );
   if (view.phase === "draft") {
     const drafter = view.players.find(
       (p) => p.id === view.draft.order[view.draft.cursor],
@@ -1049,38 +1047,6 @@ export function GameScreen({
       {decision}
       <div className="race-layout">
         <div>
-          <section className="turn-panel" aria-live="polite">
-            <div>
-              <p className="eyebrow">
-                {current
-                  ? view.players.find((p) => p.id === current.ownerId)?.name
-                  : t("Resolving effects", "正在處理效果")}
-              </p>
-              <h2>
-                {current
-                  ? racerLabel(current.racerId, locale)
-                  : t("Race in progress", "比賽進行中")}
-              </h2>
-            </div>
-            {canRoll ? (
-              <button
-                className="primary roll-button"
-                disabled={busy}
-                onClick={() => act({ type: "roll" })}
-              >
-                {t("Roll die", "擲骰子")}
-              </button>
-            ) : (
-              <p>
-                {view.pending
-                  ? t(
-                      `Waiting for ${view.players.find((p) => p.id === view.pending?.ownerId)?.name} to decide.`,
-                      `等待 ${view.players.find((p) => p.id === view.pending?.ownerId)?.name} 作出選擇。`,
-                    )
-                  : t("Waiting for the active player.", "等待目前玩家操作。")}
-              </p>
-            )}
-          </section>
           <Board view={view} playback={playback} />
           {view.error && (
             <div className="error" role="alert">
@@ -1100,6 +1066,7 @@ export function GameScreen({
           </details>
         </div>
         <aside>
+          <RaceRoster view={view} />
           <EventLog view={view} />
         </aside>
       </div>

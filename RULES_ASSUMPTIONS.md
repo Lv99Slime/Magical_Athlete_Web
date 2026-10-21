@@ -28,6 +28,7 @@ The supplied CMYK 2025 reference incorporates August 17, 2026 updates. It overri
 | A09 | Roll-off uses highest unique result; if no unique result exists, reroll. | Supplied transcription says use next highest after tied highest; all-nonunique fallback generalized. |
 | A10 | Cheerleader tied-last movements form simultaneous group, followed by separate self +1. Initial Start setup does not itself emit normal stop collisions. | Coherent group/initialization interpretation; not explicit in pack. |
 | A11 | Tripped racers cannot use Legs or Flip Flop to replace skipped main move; before-main powers not dependent on rolling still occur. | Reference section 12 distinction. |
+| A12 | Hypnotist offers only active racers on a different space as warp targets; itself and racers already sharing its space are never offered, and no prompt appears when no such target exists (for example at Start). | Warping a racer onto the space it already occupies changes nothing; the supplied "any active racer" wording is read as any racer the warp can actually relocate. tests/rules-audit.test.ts. |
 
 ## Known source limitation
 

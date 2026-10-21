@@ -1,8 +1,8 @@
 import { RACERS, SCHEDULE, TRACKS, racerName } from "@magical/engine";
-import type { PlayerView } from "@magical/engine";
-import { useI18n } from "./i18n";
+import type { PlayerView, RacerInstance } from "@magical/engine";
+import { useI18n, type Locale } from "./i18n";
 import { boardCell } from "./boardLayout";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import type { PlaybackFrame } from "./racePlayback";
 import {
   racerLabel,
@@ -19,6 +19,33 @@ export const COLORS = [
   "#b5a4d8",
   "#e99470",
 ];
+/** Each player keeps one colour for scores, tokens and decision targets. */
+export function playerColor(view: PlayerView, playerId: string) {
+  const index = view.players.findIndex((p) => p.id === playerId);
+  return COLORS[index] ?? "#bdb69d";
+}
+/** Short bilingual status: space, tripped flag and any copied power. */
+export function racerStatusText(
+  r: RacerInstance,
+  view: PlayerView,
+  locale: Locale,
+) {
+  const zh = locale === "zh-Hant";
+  const parts: string[] = [];
+  if (r.status === "active")
+    parts.push(zh ? `第 ${r.position} 格` : `Space ${r.position}`);
+  else if (r.status === "finished") parts.push(zh ? "已完成比賽" : "finished");
+  else parts.push(zh ? "已淘汰" : "eliminated");
+  if (r.tripped) parts.push(zh ? "已絆倒" : "Tripped");
+  if (r.powerId !== r.racerId)
+    parts.push(
+      zh
+        ? `${r.powerId ? zhRacerName(r.powerId) : "沒有可複製"}能力`
+        : `${racerName(r.powerId)} power`,
+    );
+  void view;
+  return parts.join(" · ");
+}
 /** Six 3x2 sprite sheets, following the source catalogue's stable ID order. */
 export function RacerArt({ id, size = 72 }: { id: string; size?: number }) {
   const index = Math.max(
@@ -139,6 +166,12 @@ export function Board({
       travel.set(e.racerId, e.type);
   for (const id of playback?.movingIds ?? [])
     travel.set(id, playback!.event.type);
+  const effectLabel = (type: string) =>
+    type === "star"
+      ? t("+1 pt", "+1 分")
+      : type === "trip"
+        ? t("TRIP", "絆倒")
+        : t("arrow", "箭嘴");
   return (
     <section
       className="board-panel"
@@ -174,7 +207,7 @@ export function Board({
                 )}
               </span>
             </div>
-            <span className="route-direction">
+            <span className="route-direction lower">
               {t("← Lower straight", "← 下排向左")}
             </span>
           </div>
@@ -204,11 +237,9 @@ export function Board({
                 </span>
                 {effect && (
                   <span className="space-effect">
-                    {effect.type === "star"
-                      ? t("+1 pt", "+1 分")
-                      : effect.type === "trip"
-                        ? t("TRIP", "絆倒")
-                        : `${effect.delta! > 0 ? "+" : ""}${effect.delta}`}
+                    {effect.type === "arrow"
+                      ? `${effect.delta! > 0 ? "+" : ""}${effect.delta}`
+                      : effectLabel(effect.type)}
                   </span>
                 )}
                 <div className="tokens">
@@ -221,12 +252,11 @@ export function Board({
                       }
                       title={`${racerLabel(r.racerId, locale)} · ${view.players.find((p) => p.id === r.ownerId)?.name}${r.tripped ? t(" · Tripped", " · 已絆倒") : ""}`}
                       className={`token ${travel.get(r.id) === "WARP" ? "warp-arrival" : "move-arrival"} ${view.turn?.racerId === r.id ? "active-token" : ""} ${playback?.event.type === "POWER_TRIGGERED" && playback.event.racerId === r.id ? "power-token" : ""} ${r.tripped ? "tripped" : ""}`}
-                      style={{
-                        borderColor:
-                          COLORS[
-                            view.players.findIndex((p) => p.id === r.ownerId)
-                          ],
-                      }}
+                      style={
+                        {
+                          "--player-color": playerColor(view, r.ownerId),
+                        } as CSSProperties
+                      }
                     >
                       <RacerArt id={r.racerId} size={32} />
                       <span>{shortName(r.racerId)}</span>
@@ -244,55 +274,62 @@ export function Board({
           "沿 U 型路線前進：上排向右，經第 12、15 格彎道向下，再沿下排向左到終點。小螢幕可左右滑動。",
         )}
       </p>
-      <div className="race-roster">
-        {view.racers.map((r) => (
-          <div
-            key={r.id}
-            className={view.turn?.racerId === r.id ? "current-racer" : ""}
-          >
-            <RacerArt id={r.racerId} size={40} />
-            <div>
-              <strong>{racerLabel(r.racerId, locale)}</strong>
-              <small>
-                {view.players.find((p) => p.id === r.ownerId)?.name} ·{" "}
-                {r.status === "active"
-                  ? t(
-                      `Space ${r.position}${r.tripped ? " · Tripped" : ""}`,
-                      `第 ${r.position} 格${r.tripped ? " · 已絆倒" : ""}`,
-                    )
-                  : t(
-                      r.status,
-                      r.status === "finished" ? "已完成比賽" : "已淘汰",
-                    )}
-                {r.powerId !== r.racerId
-                  ? t(
-                      ` · ${racerName(r.powerId)} power`,
-                      ` · ${r.powerId ? zhRacerName(r.powerId) : "沒有可複製"}能力`,
-                    )
-                  : ""}
-              </small>
-            </div>
-          </div>
-        ))}
-      </div>
     </section>
   );
 }
-export function Scoreboard({ view }: { view: PlayerView }) {
+/** Every racer in this race with owner, place and power, ordered by turn. */
+export function RaceRoster({ view }: { view: PlayerView }) {
+  const { locale, t } = useI18n();
+  const ordered = view.turnOrder
+    .map((id) => view.racers.find((r) => r.id === id))
+    .filter((r): r is RacerInstance => !!r);
+  return (
+    <section className="race-roster" aria-label={t("Racers in this race", "本場選手")}>
+      <h3>{t("This race", "本場選手")}</h3>
+      {ordered.map((r) => (
+        <div
+          key={r.id}
+          className={`${view.turn?.racerId === r.id ? "current-racer" : ""} ${r.status !== "active" ? "inactive" : ""}`}
+          style={
+            { "--player-color": playerColor(view, r.ownerId) } as CSSProperties
+          }
+        >
+          <RacerArt id={r.racerId} size={40} />
+          <div>
+            <strong>{racerLabel(r.racerId, locale)}</strong>
+            <small>
+              <i className="owner-dot" aria-hidden="true" />
+              {view.players.find((p) => p.id === r.ownerId)?.name} ·{" "}
+              {racerStatusText(r, view, locale)}
+            </small>
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+export function Scoreboard({
+  view,
+  currentPlayerId,
+}: {
+  view: PlayerView;
+  currentPlayerId?: string;
+}) {
   const { t } = useI18n();
   return (
     <section className="scoreboard" aria-label={t("Player scores", "玩家分數")}>
       {view.players.map((p, i) => (
         <div
           key={p.id}
-          style={{ "--player-color": COLORS[i] } as React.CSSProperties}
+          className={p.id === currentPlayerId ? "current-player" : ""}
+          style={{ "--player-color": COLORS[i] } as CSSProperties}
         >
-          <span>{p.name}</span>
+          <span className="score-name">{p.name}</span>
           <strong>
             {p.score}
             <small>{t(" pts", " 分")}</small>
           </strong>
-          <small>
+          <small className="score-used">
             {t(
               `${p.used.length} / ${p.team.length} racers used`,
               `已出賽 ${p.used.length} / ${p.team.length} 名`,
@@ -317,27 +354,33 @@ export function EventLog({ view }: { view: PlayerView }) {
         {view.events
           .slice(-80)
           .reverse()
-          .map((e) => (
-            <li key={e.id}>
-              <span className="event-type">
-                {eventTypeLabel(e.type, locale)}
-              </span>
-              <p>{translateEvent(e, locale, view)}</p>
-              {e.parentId !== undefined && (
-                <small>
-                  {t("Caused by: ", "觸發來源：")}
-                  {(() => {
-                    const parent = view.events.find(
-                      (parent) => parent.id === e.parentId,
-                    );
-                    return parent
-                      ? translateEvent(parent, locale, view)
-                      : t("an earlier effect", "較早的效果");
-                  })()}
-                </small>
-              )}
-            </li>
-          ))}
+          .map((e) => {
+            const racer = view.racers.find((r) => r.id === e.racerId);
+            return (
+              <li key={e.id} data-event-type={e.type}>
+                {racer && <RacerArt id={racer.racerId} size={26} />}
+                <div>
+                  <span className="event-type">
+                    {eventTypeLabel(e.type, locale)}
+                  </span>
+                  <p>{translateEvent(e, locale, view)}</p>
+                  {e.parentId !== undefined && (
+                    <small>
+                      {t("Caused by: ", "觸發來源：")}
+                      {(() => {
+                        const parent = view.events.find(
+                          (parent) => parent.id === e.parentId,
+                        );
+                        return parent
+                          ? translateEvent(parent, locale, view)
+                          : t("an earlier effect", "較早的效果");
+                      })()}
+                    </small>
+                  )}
+                </div>
+              </li>
+            );
+          })}
       </ol>
     </details>
   );
