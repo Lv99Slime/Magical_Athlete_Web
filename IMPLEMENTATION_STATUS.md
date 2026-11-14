@@ -83,3 +83,35 @@ Deployment accepted: https://lv99slime.github.io/Magical_Athlete_Web/ is live. G
 - Header sound/fast toggles are switch-styled checkboxes (same accessible names). Starting a new local game while a save exists asks for confirmation before overwriting it.
 - Rules interpretation A12: Hypnotist is offered only racers it can actually relocate (never itself or racers already on its space) and is not prompted when no such target exists. Recorded in RULES_ASSUMPTIONS.md with two unit tests.
 - Verification on this change: typecheck, lint, 140 unit tests (6 backend tests still environment-skipped), production build, and the browser suite on Chromium desktop and mobile emulation. Firefox/WebKit projects were not run on this machine.
+
+## 3D pop-up paper book — style sample (2026-11-14)
+
+Stage 1 of the planned 3D board: a static look-and-feel sample, not yet wired to game state. Open it with `?lab=paper3d`; the normal game is unchanged and stays the default.
+
+- React Three Fiber scene in `apps/web/src/three/`: an open book with the board on the flat page and the existing race illustration on the standing page, layered paper cutouts (hills, castle, trees, mushrooms, clouds on struts), the full U route as paper tiles with pop-up tabs for Wild Wilds special spaces, four sample pawns (active, two sharing a space, one tripped) and a paper die.
+- Pawns are simple player-coloured pieces carrying the racer portrait as a flag; flags on a shared space alternate height so each stays readable.
+- `trackLayout3d.ts` mirrors the 2D `boardLayout.ts` mapping and is unit-tested. Cutout ink lines use flat edge geometry because inverted-hull outlines bulge through many-sided shapes.
+- The 3D code is a separate lazily loaded chunk (about 264 kB gzip); the main page does not request it. The React vendor chunk rule now matches only react, react-dom and scheduler.
+- Verification: typecheck, lint, 146 unit tests (6 backend tests still environment-skipped), production build, and local, dice-board and paper-lab browser specs on Chromium desktop and mobile emulation. Rendering was reviewed in headless Chromium with software WebGL and compared against a real GPU (Intel UHD 620) by canvas readback; not yet checked on a physical phone. Devices without WebGL get a written notice instead of the canvas. Firefox/WebKit projects were not run on this machine.
+- Not done yet (later stages): reading live game state, the 2D/3D switch, movement and dice animation, mobile performance work.
+
+## 3D board stage 2 — live state and the 2D / 3D switch (2026-11-14)
+
+- A "3D board" switch in the header (shown during a game, remembered per browser, off by default) swaps the race board for the pop-up paper book. Everything else on the race screen stays HTML: turn console, power decisions, roster and log.
+- `PaperBoard3D` only displays the player view it is given. `boardPawns.ts` turns that view into pawn spots: eliminated racers are left out, finished racers rest on Finish, racers sharing a space keep their order, and the racer whose turn it is gets a ring. The paper die shows the last roll of the current race.
+- Playback already works in 3D because the board receives the same per-step views as the 2D board; pawns glide between steps. Hop arcs, warp effects and a rolling die are stage 3 and 4 work.
+- Wide panels frame the whole book. Narrow panels stay close and glide to the racer whose turn it is. Fast mode and reduced motion draw frames only when something changes.
+- Safety nets: the three.js chunk loads only after the switch is turned on, with the 2D board shown while it downloads; the switch is disabled without WebGL; if the 3D board throws, the 2D board returns with a short notice.
+- Verification: typecheck, lint, 151 unit tests (6 backend tests still environment-skipped), production build, and all 32 browser tests on Chromium desktop and mobile emulation, including turning 3D on, reloading, and playing a turn in 3D. Not yet checked on a physical phone; Firefox and WebKit projects were not run on this machine and skip the 3D checks if WebGL is unavailable.
+- Known limits: dragging on the 3D canvas turns the book, so on a phone the page must be scrolled from outside the canvas. Pawns are small when the whole book is in view on desktop.
+
+## 3D board stage 3 — pawn animation and camera follow (2026-11-14)
+
+- Pawns now act out the playback instead of only gliding. A pawn named in a playback frame hops one space per step with a landing squash; a warp folds the pawn flat into the page and pops it up at the new space; tripping tips the pawn over with a bounce and it stands back up when the trip is spent; crossing the line gets a spinning jump under a burst of paper scraps. Pawns that are only making room on a shared space still glide.
+- `pawnMotion.ts` holds every pose as a pure function of elapsed time (`hopPose`, `warpPose`, `fallAmount`, `cheerPose`, confetti, `travelKind`, `focusPawn`) and is unit-tested. The scraps use a repeatable scatter seeded by the event id, never `Math.random`. Nothing here changes rules, dice or game state; the 3D board only reads the playback frame the 2D board already receives.
+- Camera: narrow panels follow the pawn that is moving (then the racer an event is about, then the racer whose turn it is). Wide panels keep the whole book in view and lean slightly towards the action during playback. A view the player has dragged is left alone until the next goal change.
+- Fast mode and reduced motion skip all of this: there is no playback, pawns snap, and frames are still drawn on demand.
+- The style sample (`?lab=paper3d`) has Hop / Warp / Trip / Finish / Reset buttons that script stand-in playback frames, so each animation can be watched without playing a race.
+- Verification: typecheck, lint, 166 unit tests (6 backend tests still environment-skipped), production build, and all 34 browser tests on Chromium desktop and mobile emulation (17 each, run with one worker). Each animation was reviewed frame by frame in headless Chromium by stepping Playwright's fake clock. A code review found no critical or high issues; its three medium and low findings (dragged view springing back, stale confetti after toggling fast mode, idle bob popping in after a hop) are fixed.
+- Test notes: headless Chromium draws the 3D board with software WebGL at only a few frames a second on this machine (the main thread is idle; the time is in the software rasteriser), so a page that renders continuously starves the other test workers. The lab animation test therefore installs Playwright's fake clock and steps time itself, the game 3D tests turn on Fast animations before switching to 3D (frames on demand), the lab tests run serially and wait on a completion counter, and the 3D turn test reveals a hand-off curtain before checking the canvas. If 3D tests still time out on a busy machine, rerun the two 3D spec files with `--workers=1`.
+- Not done yet: rolling 3D die, power spotlight, opening pop-up (stage 4); eliminated pawns still vanish without an exit animation; physical phone, Firefox and WebKit checks (stage 5).

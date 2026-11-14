@@ -14,7 +14,10 @@ export default defineConfig({
         manualChunks(id) {
           if (id.includes("node_modules")) {
             if (id.includes("@supabase")) return "online";
-            if (id.includes("react")) return "react";
+            // Only React itself: three.js helpers with "react" in their name
+            // must stay in the lazily loaded 3D chunk.
+            if (/node_modules\/(react|react-dom|scheduler)\//.test(id))
+              return "react";
             if (id.includes("zod")) return "validation";
           }
         },

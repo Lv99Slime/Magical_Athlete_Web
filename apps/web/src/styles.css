@@ -364,8 +364,7 @@ html[lang="zh-Hant"] .hero-copy {
 .hero-art {
   position: relative;
   min-height: 320px;
-  background: var(--paper) url("/art/race-world.webp") center / cover
-    no-repeat;
+  background: var(--paper) url("/art/race-world.webp") center / cover no-repeat;
   border: 2px solid var(--ink);
   box-shadow: 6px 6px 0 var(--ink);
   transform: rotate(1deg);
@@ -1091,6 +1090,35 @@ html[lang="zh-Hant"] .hero-copy {
   line-height: 1.5;
 }
 
+/* ---------- 3D board ---------- */
+.board-panel-3d {
+  background: var(--paper);
+}
+.board-panel-3d .board-title {
+  min-height: 0;
+  margin-bottom: 10px;
+}
+.board-canvas {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 380px;
+  max-height: 72vh;
+  border: 2px solid var(--ink);
+  background: var(--paper-deep);
+  overflow: hidden;
+}
+.board-canvas canvas {
+  display: block;
+}
+.board-notice {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border: 1px dashed var(--ink);
+  background: var(--paper);
+  font-size: 13px;
+}
+
 /* ---------- roster ---------- */
 .race-roster {
   border: 2px solid var(--ink);
@@ -1442,6 +1470,60 @@ summary {
   margin: 0;
 }
 
+/* ---------- 3D style sample ---------- */
+.paper-lab {
+  position: fixed;
+  inset: 0;
+  background: var(--paper-deep);
+  touch-action: none;
+}
+.paper-lab canvas {
+  display: block;
+}
+.paper-lab-caption {
+  position: absolute;
+  left: 16px;
+  top: 14px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  max-width: calc(100% - 32px);
+  padding: 8px 14px 8px 10px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  box-shadow: var(--shadow-3);
+}
+.paper-lab-caption strong {
+  font-family: var(--serif);
+  font-size: 18px;
+}
+.paper-lab-caption small {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+.paper-lab-caption a {
+  min-height: 0;
+  padding: 4px 0;
+}
+.paper-lab-demo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  flex-basis: 100%;
+  padding-top: 6px;
+  border-top: 1px dashed var(--ink-soft);
+}
+.paper-lab-demo button {
+  min-height: 32px;
+  padding: 4px 10px;
+}
+.paper-lab-fallback {
+  margin: 96px 24px;
+  max-width: 420px;
+}
+
 /* ---------- motion ---------- */
 @keyframes arrive {
   0% {
@@ -1787,6 +1869,11 @@ summary {
   }
   .track-infield {
     padding: 8px 10px;
+  }
+  .board-canvas {
+    aspect-ratio: 4 / 5;
+    min-height: 0;
+    max-height: 62vh;
   }
   .race-layout aside {
     grid-template-columns: 1fr;

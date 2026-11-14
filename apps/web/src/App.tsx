@@ -1,6 +1,6 @@
 import { useI18n, translateUiMessage, phaseLabel } from "./i18n";
 import { racerLabel, translateGameText } from "./racerTranslations";
-import { useEffect, useRef, useState, useMemo } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, useMemo } from "react";
 import { useDicePresentation } from "./dicePresentation";
 import { gameAudio } from "./gameAudio";
 import type { PlaybackFrame } from "./racePlayback";
@@ -22,6 +22,13 @@ import {
 } from "./components";
 import { TurnConsole } from "./TurnConsole";
 import { DecisionPanel } from "./DecisionPanel";
+import { Board3DBoundary } from "./Board3DBoundary";
+import { supportsWebGL } from "./webgl";
+import type { DiceDisplay } from "./dicePresentation";
+
+/** three.js is only downloaded once a player switches the board to 3D. */
+const PaperBoard3D = lazy(() => import("./three/PaperBoard3D"));
+const BOARD_MODE_KEY = "magical-board";
 import { loadGame, saveGame } from "./storage";
 import {
   connectOnline,
@@ -86,6 +93,22 @@ export function App() {
       /* Storage may be disabled. */
     }
   }, [sound, volume]);
+  const [webgl] = useState(supportsWebGL);
+  const [board3d, setBoard3d] = useState(() => {
+    try {
+      return localStorage.getItem(BOARD_MODE_KEY) === "3d";
+    } catch {
+      return false;
+    }
+  });
+  const chooseBoard3d = (next: boolean) => {
+    setBoard3d(next);
+    try {
+      localStorage.setItem(BOARD_MODE_KEY, next ? "3d" : "2d");
+    } catch {
+      /* The choice still applies for this visit. */
+    }
+  };
   const [library, setLibrary] = useState(false);
   useEffect(() => {
     if (!library) return;
@@ -314,6 +337,28 @@ export function App() {
             {t("Racer guide", "選手圖鑑")}
           </button>
           {screen !== "home" && (
+            <label
+              className="toggle board-toggle"
+              title={
+                webgl
+                  ? undefined
+                  : t(
+                      "This device cannot show the 3D board.",
+                      "此裝置未能顯示 3D 棋盤。",
+                    )
+              }
+            >
+              <input
+                type="checkbox"
+                checked={board3d && webgl}
+                disabled={!webgl}
+                onChange={(e) => chooseBoard3d(e.target.checked)}
+              />
+              <span className="toggle-track" aria-hidden="true" />
+              <span>{t("3D board", "3D 棋盤")}</span>
+            </label>
+          )}
+          {screen !== "home" && (
             <label className="toggle fast-toggle">
               <input
                 type="checkbox"
@@ -439,6 +484,9 @@ export function App() {
               playerId={screen === "local" ? actor : room!.playerId}
               busy={busy || presentation.playing}
               playback={presentation.frame}
+              dice={presentation.dice}
+              board3d={board3d && webgl}
+              fast={fast}
               act={screen === "local" ? localAction : sendOnline}
             />
           )}
@@ -844,12 +892,18 @@ export function GameScreen({
   busy,
   act,
   playback,
+  dice,
+  board3d = false,
+  fast = false,
 }: {
   view: PlayerView;
   playerId: string;
   busy: boolean;
   act: (action: PlayerAction) => void;
   playback?: PlaybackFrame;
+  dice?: DiceDisplay;
+  board3d?: boolean;
+  fast?: boolean;
 }) {
   const { t, locale } = useI18n();
 
@@ -1047,7 +1101,31 @@ export function GameScreen({
       {decision}
       <div className="race-layout">
         <div>
-          <Board view={view} playback={playback} />
+          {board3d ? (
+            // The 2D board covers both the download and any 3D failure.
+            <Board3DBoundary
+              fallback={<Board view={view} playback={playback} />}
+              notice={
+                <p className="board-notice" role="status" data-board-fallback>
+                  {t(
+                    "The 3D board could not start here, so the 2D board is shown.",
+                    "此裝置未能啟動 3D 棋盤，已改為顯示 2D 棋盤。",
+                  )}
+                </p>
+              }
+            >
+              <Suspense fallback={<Board view={view} playback={playback} />}>
+                <PaperBoard3D
+                  view={view}
+                  dice={dice}
+                  playback={playback}
+                  still={fast}
+                />
+              </Suspense>
+            </Board3DBoundary>
+          ) : (
+            <Board view={view} playback={playback} />
+          )}
           {view.error && (
             <div className="error" role="alert">
               {translateGameText(
