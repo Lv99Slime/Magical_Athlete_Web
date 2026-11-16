@@ -40,22 +40,37 @@ const STEP_MS = 180;
 const WARP_FRAME_MS = 480;
 const TRIP_FRAME_MS = 480;
 const FINISH_FRAME_MS = 650;
+const POWER_FRAME_MS = 750;
+const ELIMINATED_FRAME_MS = 480;
+const ROLLING_FRAME_MS = 650;
+const RESULT_FRAME_MS = 550;
 const HOP_STEPS = 5;
 const WARP_SPACES = 9;
 const FINISH_RUN_UP = 3;
 
+/** The sample die. Demo rolls cycle through the faces; nothing here is random. */
+interface LabDie {
+  face: number;
+  rolling: boolean;
+  rollId: number;
+}
+
 interface LabScene {
   source: PawnSource;
   cue?: PlaybackCue;
+  die: LabDie;
+  /** Bumped to replay the book opening. */
+  opening: number;
   /** How many demos have played to the end; lets tests wait without racing. */
   played: number;
 }
 
-/** One beat of a demo: an optional change to the sample, shown for `wait` ms. */
+/** One beat of a demo: optional changes to the sample, shown for `wait` ms. */
 interface DemoStep {
   wait: number;
   change?: (source: PawnSource) => PawnSource;
   cue?: PlaybackCue;
+  die?: Partial<LabDie>;
 }
 
 const racerIn = (source: PawnSource, id: string): SampleRacer =>
@@ -106,6 +121,29 @@ function demoSteps(name: string, eventId: number): DemoStep[] {
         cue: cueFor("RACER_TRIPPED", "magician", eventId),
       },
     ];
+  if (name === "roll")
+    return [
+      { wait: ROLLING_FRAME_MS, die: { rolling: true, rollId: eventId } },
+      {
+        wait: RESULT_FRAME_MS,
+        die: { rolling: false, face: (eventId % 6) + 1 },
+      },
+    ];
+  if (name === "out")
+    return [
+      {
+        wait: ELIMINATED_FRAME_MS,
+        change: withRacer("banana", () => ({ status: "eliminated" })),
+        cue: cueFor("RACER_ELIMINATED", "banana", eventId),
+      },
+    ];
+  if (name === "power")
+    return [
+      {
+        wait: POWER_FRAME_MS,
+        cue: cueFor("POWER_TRIGGERED", "magician", eventId),
+      },
+    ];
   return [
     {
       wait: 600,
@@ -127,6 +165,13 @@ function demoSteps(name: string, eventId: number): DemoStep[] {
   ];
 }
 
+const START_SCENE: LabScene = {
+  source: SAMPLE,
+  die: { face: SAMPLE_DIE, rolling: false, rollId: 0 },
+  opening: 1,
+  played: 0,
+};
+
 function SampleScene({ scene, still }: { scene: LabScene; still: boolean }) {
   const track = TRACKS.find(
     (candidate: { id: string }) => candidate.id === "wild_wilds",
@@ -135,9 +180,16 @@ function SampleScene({ scene, still }: { scene: LabScene; still: boolean }) {
   const pawns = useMemo(() => boardPawns(scene.source), [scene.source]);
   return (
     <>
-      <PaperStage track={track}>
+      <PaperStage track={track} opening={still ? undefined : scene.opening}>
         <PaperPawns pawns={pawns} cue={scene.cue} still={still} />
-        <PaperDie value={SAMPLE_DIE} position={[5.3, 0.31, 0.45]} spin={0.5} />
+        <PaperDie
+          value={scene.die.rolling ? undefined : scene.die.face}
+          position={[5.3, 0.31, 0.45]}
+          spin={0.5}
+          rolling={scene.die.rolling}
+          rollId={scene.die.rollId}
+          still={still}
+        />
       </PaperStage>
       <CameraRig
         size={size}
@@ -154,10 +206,7 @@ export default function PaperLab() {
   const { t } = useI18n();
   const still = useReducedMotion();
   const [webgl] = useState(supportsWebGL);
-  const [scene, setScene] = useState<LabScene>({
-    source: SAMPLE,
-    played: 0,
-  });
+  const [scene, setScene] = useState<LabScene>(START_SCENE);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const eventId = useRef(0);
   const stop = () => {
@@ -174,9 +223,10 @@ export default function PaperLab() {
         setTimeout(
           () =>
             setScene((shown) => ({
+              ...shown,
               source: step.change ? step.change(shown.source) : shown.source,
               cue: step.cue,
-              played: shown.played,
+              die: { ...shown.die, ...step.die },
             })),
           delay,
         ),
@@ -187,7 +237,8 @@ export default function PaperLab() {
       setTimeout(
         () =>
           setScene((shown) => ({
-            source: shown.source,
+            ...shown,
+            cue: undefined,
             played: shown.played + 1,
           })),
         delay,
@@ -196,9 +247,31 @@ export default function PaperLab() {
   };
   const reset = () => {
     stop();
-    setScene((shown) => ({ source: SAMPLE, played: shown.played }));
+    setScene((shown) => ({
+      ...START_SCENE,
+      opening: shown.opening,
+      played: shown.played,
+    }));
+  };
+  const reopen = () => {
+    stop();
+    setScene((shown) => ({
+      ...shown,
+      cue: undefined,
+      die: { ...shown.die, rolling: false },
+      opening: shown.opening + 1,
+    }));
   };
   const finished = racerIn(scene.source, "huge_baby").status === "finished";
+  const demos: [string, string][] = [
+    ["roll", t("Roll", "擲骰")],
+    ["hop", t("Hop", "跳格")],
+    ["warp", t("Warp", "傳送")],
+    ["trip", t("Trip", "絆倒")],
+    ["power", t("Power", "能力")],
+    ["out", t("Out", "淘汰")],
+    ["finish", t("Finish", "衝線")],
+  ];
   return (
     <div className="paper-lab">
       {webgl ? (
@@ -241,18 +314,16 @@ export default function PaperLab() {
             aria-label={t("Animation demo", "動畫示範")}
             data-demo-played={scene.played}
             data-demo-finished={finished ? "true" : "false"}
+            data-demo-face={scene.die.rolling ? "rolling" : scene.die.face}
+            data-demo-opening={scene.opening}
           >
-            <button className="quiet" onClick={() => play("hop")}>
-              {t("Hop", "跳格")}
-            </button>
-            <button className="quiet" onClick={() => play("warp")}>
-              {t("Warp", "傳送")}
-            </button>
-            <button className="quiet" onClick={() => play("trip")}>
-              {t("Trip", "絆倒")}
-            </button>
-            <button className="quiet" onClick={() => play("finish")}>
-              {t("Finish", "衝線")}
+            {demos.map(([name, label]) => (
+              <button key={name} className="quiet" onClick={() => play(name)}>
+                {label}
+              </button>
+            ))}
+            <button className="quiet" onClick={reopen}>
+              {t("Open book", "揭書")}
             </button>
             <button className="quiet" onClick={reset}>
               {t("Reset", "重設")}

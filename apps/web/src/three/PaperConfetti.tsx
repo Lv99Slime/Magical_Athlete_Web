@@ -50,10 +50,10 @@ export function PaperConfetti({
     );
     if (instances.instanceColor) instances.instanceColor.needsUpdate = true;
   }, [pieces]);
-  useFrame(({ clock }) => {
+  useFrame(() => {
     const instances = mesh.current;
     if (!instances || !instances.visible) return;
-    const now = clock.elapsedTime * 1000;
+    const now = performance.now();
     started.current ??= now;
     const elapsed = now - started.current;
     if (elapsed >= CONFETTI_MS) {

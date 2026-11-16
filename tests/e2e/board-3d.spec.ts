@@ -52,9 +52,18 @@ test("the board starts in 2D and the 3D choice is remembered", async ({
   // The rules-facing controls and the written roster stay as HTML.
   await expect(page.locator(".turn-console")).toBeVisible();
   await expect(page.locator(".race-roster > div")).toHaveCount(3);
+  // On touch screens one finger must stay free to scroll the page.
+  const touchScreen = await page.evaluate(
+    () => window.matchMedia("(pointer: coarse)").matches,
+  );
+  await expect(board3d.locator('[style*="touch-action: pan-y"]')).toHaveCount(
+    touchScreen ? 1 : 0,
+  );
 
   await page.reload();
   await page.getByRole("button", { name: /Resume saved game/ }).click();
+  // Fast mode is not remembered; turn it on before the board is shown again.
+  await page.getByLabel("Fast animations").check();
   const curtain = page.getByRole("button", { name: /— reveal/ });
   if (await curtain.count()) await curtain.click();
   await expect(page.getByRole("checkbox", { name: "3D board" })).toBeChecked();

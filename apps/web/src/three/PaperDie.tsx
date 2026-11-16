@@ -1,7 +1,9 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Outlines, RoundedBox } from "@react-three/drei";
+import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { PAPER } from "./paperTheme";
+import { settlePose, tumblePose } from "./stageMotion";
 
 const SIZE = 0.62;
 const PIP_RADIUS = 0.055;
@@ -75,15 +77,42 @@ export function dieRotationFor(value: number, spin = 0): THREE.Quaternion {
   return twist.multiply(toTop);
 }
 
+export interface PaperDieProps {
+  /** The face the engine rolled; not known while the die is still in the air. */
+  value?: number;
+  /** Where the die comes to rest. */
+  position: [number, number, number];
+  spin?: number;
+  /** True while the roll is being played back, before the result is shown. */
+  rolling?: boolean;
+  /** Changes with every roll; it seeds the throw so replays look the same. */
+  rollId?: number;
+  /** Reduced-motion and fast modes: the die just shows the result. */
+  still?: boolean;
+}
+
+/** Animation bookkeeping kept between frames; never read while rendering. */
+interface DieState {
+  mode: "rest" | "tumble" | "settle";
+  rollId?: number;
+  start: number;
+}
+
+const mix = (from: number, to: number, amount: number) =>
+  from + (to - from) * amount;
+
+/**
+ * The paper die. It tumbles while a roll is played back and then settles with
+ * the engine's result on top; it never picks a face itself.
+ */
 export function PaperDie({
   value,
   position,
   spin = 0,
-}: {
-  value: number;
-  position: [number, number, number];
-  spin?: number;
-}) {
+  rolling = false,
+  rollId = 0,
+  still = false,
+}: PaperDieProps) {
   const pips = useMemo(
     () =>
       FACES.flatMap((face) => {
@@ -92,7 +121,7 @@ export function PaperDie({
           face.normal,
         );
         return PIPS[face.value].map(([column, row]) => ({
-          key: `${face.value}-${column}-${row}`,
+          key: [face.value, column, row].join("-"),
           quaternion: facing,
           position: face.normal
             .clone()
@@ -103,9 +132,64 @@ export function PaperDie({
       }),
     [],
   );
-  const rotation = useMemo(() => dieRotationFor(value, spin), [value, spin]);
+  const rest = useMemo(() => dieRotationFor(value ?? 1, spin), [value, spin]);
+  const die = useRef<THREE.Group>(null);
+  const motion = useRef<DieState>({ mode: "rest", start: 0 });
+  const thrown = useMemo(
+    () => ({
+      quaternion: new THREE.Quaternion(),
+      position: new THREE.Vector3(),
+    }),
+    [],
+  );
+  const invalidate = useThree((state) => state.invalidate);
+  // Ask for a frame when the die changes; needed when frames are drawn on demand.
+  useEffect(() => {
+    invalidate();
+  }, [value, spin, rolling, still, invalidate]);
+  const [restX, restY, restZ] = position;
+  useFrame(() => {
+    const group = die.current;
+    if (!group) return;
+    const now = performance.now();
+    const state = motion.current;
+    if (still) {
+      state.mode = "rest";
+    } else if (rolling) {
+      if (state.mode !== "tumble" || state.rollId !== rollId) {
+        state.mode = "tumble";
+        state.rollId = rollId;
+        state.start = now;
+      }
+    } else if (state.mode === "tumble") {
+      // The result is in: start from wherever the tumble left the die.
+      state.mode = "settle";
+      state.start = now;
+      thrown.quaternion.copy(group.quaternion);
+      thrown.position.copy(group.position);
+    }
+    if (state.mode === "tumble") {
+      const pose = tumblePose(now - state.start, rollId);
+      group.position.set(restX + pose.x, restY + pose.y, restZ + pose.z);
+      group.rotation.set(pose.rotationX, pose.rotationY, pose.rotationZ);
+      return;
+    }
+    if (state.mode === "settle") {
+      const pose = settlePose(now - state.start);
+      group.position.set(
+        mix(thrown.position.x, restX, pose.blend),
+        mix(thrown.position.y, restY, pose.blend) + pose.hop,
+        mix(thrown.position.z, restZ, pose.blend),
+      );
+      group.quaternion.slerpQuaternions(thrown.quaternion, rest, pose.blend);
+      if (pose.done) state.mode = "rest";
+      return;
+    }
+    group.position.set(restX, restY, restZ);
+    group.quaternion.copy(rest);
+  });
   return (
-    <group position={position} quaternion={rotation}>
+    <group ref={die}>
       <RoundedBox
         args={[SIZE, SIZE, SIZE]}
         radius={0.085}

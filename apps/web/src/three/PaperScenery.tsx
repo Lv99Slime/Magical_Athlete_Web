@@ -6,9 +6,18 @@ import {
   roundedRectPath,
   useCanvasTexture,
 } from "./paperTheme";
+import { PopUp } from "./PopUp";
 
 const PAPER_THICKNESS = 0.04;
 const INK_WIDTH = 0.06;
+/** When each layer springs up as the book opens, in ms; back layers go first. */
+const POP_DELAYS = {
+  farHills: 350,
+  sky: 470,
+  trees: 560,
+  nearHills: 650,
+  infield: 800,
+};
 
 /**
  * Flat ink line around a shape: one quad per edge plus a small disc at every
@@ -66,7 +75,7 @@ function inkEdgeGeometry(
 }
 
 /** One flat piece of card cut to `shape`, standing on its bottom edge. */
-function Cutout({
+export function Cutout({
   shape,
   colour,
   position,
@@ -466,59 +475,68 @@ export function PaperScenery({
   );
   return (
     <group>
-      <Cutout
-        shape={farHills}
-        colour={PAPER.teal}
-        position={[0, 0, backZ + 0.35]}
-        lean={0.06}
-      />
-      <Cloud position={[-6.4, 3.1, backZ + 0.6]} scale={0.95} />
-      <Cloud position={[-1.7, 3.5, backZ + 0.55]} scale={0.7} />
-      <Cloud position={[5.9, 3.2, backZ + 0.6]} scale={1.05} />
-      <Castle position={[2.4, 0, backZ + 0.85]} />
-      <Tree position={[-7.6, 0, backZ + 1.0]} scale={1.25} />
-      <Tree position={[-6.6, 0, backZ + 1.15]} scale={0.95} />
-      <Tree position={[-3.2, 0, backZ + 1.0]} scale={1.1} />
-      <Tree position={[6.3, 0, backZ + 1.05]} scale={1.15} />
-      <Cutout
-        shape={nearHills}
-        colour={PAPER.green}
-        position={[0, 0, backZ + 1.4]}
-        lean={0.1}
-      />
-      <Mushroom position={[-8.4, 0, backZ + 1.75]} scale={1.5} />
-      <Mushroom
-        position={[-4.9, 0, backZ + 1.8]}
-        scale={0.95}
-        colour={PAPER.yellow}
-      />
-      <Mushroom position={[8.3, 0, backZ + 1.75]} scale={1.35} />
-      <Mushroom
-        position={[4.6, 0, backZ + 1.85]}
-        scale={0.8}
-        colour={PAPER.blue}
-      />
-
-      <TitleBanner title={title} position={[-0.6, 0, 0.35]} />
-      <Mushroom position={[-5.4, 0, -0.1]} scale={0.6} lean={0.25} />
-      <Mushroom
-        position={[-4.7, 0, 0.3]}
-        scale={0.42}
-        colour={PAPER.yellow}
-        lean={0.25}
-      />
-      <Cutout
-        shape={bush}
-        colour={PAPER.green}
-        position={[3.3, 0, -0.2]}
-        lean={0.3}
-      />
-      <Cutout
-        shape={bush}
-        colour={PAPER.greenDeep}
-        position={[-3.1, 0, 0.9]}
-        lean={0.3}
-      />
+      <PopUp delay={POP_DELAYS.farHills}>
+        <Cutout
+          shape={farHills}
+          colour={PAPER.teal}
+          position={[0, 0, backZ + 0.35]}
+          lean={0.06}
+        />
+      </PopUp>
+      <PopUp delay={POP_DELAYS.sky}>
+        <Cloud position={[-6.4, 3.1, backZ + 0.6]} scale={0.95} />
+        <Cloud position={[-1.7, 3.5, backZ + 0.55]} scale={0.7} />
+        <Cloud position={[5.9, 3.2, backZ + 0.6]} scale={1.05} />
+        <Castle position={[2.4, 0, backZ + 0.85]} />
+      </PopUp>
+      <PopUp delay={POP_DELAYS.trees}>
+        <Tree position={[-7.6, 0, backZ + 1.0]} scale={1.25} />
+        <Tree position={[-6.6, 0, backZ + 1.15]} scale={0.95} />
+        <Tree position={[-3.2, 0, backZ + 1.0]} scale={1.1} />
+        <Tree position={[6.3, 0, backZ + 1.05]} scale={1.15} />
+      </PopUp>
+      <PopUp delay={POP_DELAYS.nearHills}>
+        <Cutout
+          shape={nearHills}
+          colour={PAPER.green}
+          position={[0, 0, backZ + 1.4]}
+          lean={0.1}
+        />
+        <Mushroom position={[-8.4, 0, backZ + 1.75]} scale={1.5} />
+        <Mushroom
+          position={[-4.9, 0, backZ + 1.8]}
+          scale={0.95}
+          colour={PAPER.yellow}
+        />
+        <Mushroom position={[8.3, 0, backZ + 1.75]} scale={1.35} />
+        <Mushroom
+          position={[4.6, 0, backZ + 1.85]}
+          scale={0.8}
+          colour={PAPER.blue}
+        />
+      </PopUp>
+      <PopUp delay={POP_DELAYS.infield}>
+        <TitleBanner title={title} position={[-0.6, 0, 0.35]} />
+        <Mushroom position={[-5.4, 0, -0.1]} scale={0.6} lean={0.25} />
+        <Mushroom
+          position={[-4.7, 0, 0.3]}
+          scale={0.42}
+          colour={PAPER.yellow}
+          lean={0.25}
+        />
+        <Cutout
+          shape={bush}
+          colour={PAPER.green}
+          position={[3.3, 0, -0.2]}
+          lean={0.3}
+        />
+        <Cutout
+          shape={bush}
+          colour={PAPER.greenDeep}
+          position={[-3.1, 0, 0.9]}
+          lean={0.3}
+        />
+      </PopUp>
     </group>
   );
 }

@@ -39,7 +39,7 @@ describe("3D board pawn placement", () => {
     }
   });
 
-  it("leaves eliminated racers off the board", () => {
+  it("marks eliminated racers as gone instead of standing", () => {
     const pawns = boardPawns({
       players,
       racers: [
@@ -47,7 +47,10 @@ describe("3D board pawn placement", () => {
         racer("b", "p1", 9),
       ],
     });
-    expect(pawns.map((pawn) => pawn.id)).toEqual(["b"]);
+    expect(pawns.map((pawn) => [pawn.id, pawn.gone])).toEqual([
+      ["a", true],
+      ["b", false],
+    ]);
   });
 
   it("rests finished racers on Finish, never beyond it or as active", () => {

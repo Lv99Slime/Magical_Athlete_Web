@@ -1,11 +1,20 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import { useI18n } from "../i18n";
+import type { Quality } from "./frameBudget";
 import { PaperBook, type BookSize } from "./PaperBook";
 import { PaperScenery } from "./PaperScenery";
 import { PaperTrack, type TrackSpace } from "./PaperTrack";
+import { IntroContext, PopUp, type IntroClock } from "./PopUp";
 import { PAPER } from "./paperTheme";
 import { trackBounds } from "./trackLayout3d";
 
@@ -17,6 +26,14 @@ const FRONT_MARGIN = 0.75;
 const NARROW_ASPECT = 1.15;
 const FOLLOW_LIMIT_X = 6.6;
 const FOLLOW_LIMIT_Z = 1.8;
+/** Pawns and the die spring up last, once the scenery is standing. */
+const PIECES_POP_DELAY = 1000;
+const SHADOW_MAP: Record<Quality, [number, number]> = {
+  high: [2048, 2048],
+  low: [1024, 1024],
+};
+/** Any value OrbitControls does not know switches that gesture off. */
+const NO_GESTURE = -1 as THREE.TOUCH;
 /** Wide views only lean towards the action, so the whole book stays in sight. */
 const WIDE_FOLLOW_SHARE = 0.12;
 
@@ -37,22 +54,33 @@ export function bookSize(): BookSize {
   };
 }
 
-export function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+function useMediaQuery(media: string): boolean {
+  const [matches, setMatches] = useState(
+    () => window.matchMedia(media).matches,
   );
   useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const change = () => setReduced(query.matches);
+    const query = window.matchMedia(media);
+    const change = () => setMatches(query.matches);
+    change();
     query.addEventListener("change", change);
     return () => query.removeEventListener("change", change);
-  }, []);
-  return reduced;
+  }, [media]);
+  return matches;
+}
+
+export function useReducedMotion(): boolean {
+  return useMediaQuery("(prefers-reduced-motion: reduce)");
+}
+
+/** True on phones and tablets, where a finger both scrolls the page and turns the book. */
+export function useCoarsePointer(): boolean {
+  return useMediaQuery("(pointer: coarse)");
 }
 
 interface OrbitHandle {
   target: THREE.Vector3;
   update: () => void;
+  domElement?: HTMLElement | null;
 }
 
 const clamp = (value: number, limit: number) =>
@@ -84,6 +112,26 @@ export function CameraRig({
   const aspect = useThree((state) => state.size.width / state.size.height);
   const narrow = aspect < NARROW_ASPECT;
   const follow = narrow && focus !== undefined;
+  // On touch screens one finger is left to the browser so the page can still
+  // be scrolled past the board; two fingers zoom and turn (or move) the book.
+  const coarse = useCoarsePointer();
+  const touches = useMemo(
+    () =>
+      coarse
+        ? {
+            ONE: NO_GESTURE,
+            TWO:
+              narrow && !follow
+                ? THREE.TOUCH.DOLLY_PAN
+                : THREE.TOUCH.DOLLY_ROTATE,
+          }
+        : { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN },
+    [coarse, narrow, follow],
+  );
+  const surface = controls?.domElement;
+  useEffect(() => {
+    if (surface) surface.style.touchAction = coarse ? "pan-y" : "none";
+  }, [controls, surface, coarse]);
   const home = useMemo<[number, number, number]>(
     () => (narrow ? [5.4, 0.6, -0.5] : [0, 0.9, -1.9]),
     [narrow],
@@ -145,6 +193,7 @@ export function CameraRig({
     <OrbitControls
       makeDefault
       enablePan={narrow && !follow}
+      touches={touches}
       minDistance={8}
       maxDistance={60}
       minPolarAngle={0.35}
@@ -155,29 +204,71 @@ export function CameraRig({
   );
 }
 
-/** Lights, the open book, scenery and the track. Pawns and dice go in as children. */
+/**
+ * Lights, the open book, scenery and the track. Pawns and dice go in as
+ * children. Give `opening` a new number to play the book opening; leave it
+ * undefined to show the book already open.
+ */
 export function PaperStage({
   track,
+  opening,
+  quality = "high",
   children,
 }: {
   track: StageTrack;
+  opening?: number;
+  /** Low quality halves the shadow map for slower devices. */
+  quality?: Quality;
   children?: ReactNode;
 }) {
   const { t } = useI18n();
+  const intro = useRef<IntroClock>({});
+  const invalidate = useThree((state) => state.invalidate);
+  useLayoutEffect(() => {
+    intro.current = { opening, start: undefined };
+    invalidate();
+  }, [opening, invalidate]);
+  useFrame(() => {
+    const clockState = intro.current;
+    if (clockState.opening !== undefined && clockState.start === undefined)
+      clockState.start = performance.now();
+  });
   const size = useMemo(bookSize, []);
   const title = t(
     track.name,
     track.id === "mild_mile" ? "悠閒一哩 · Mild Mile" : "狂野荒野 · Wild Wilds",
   );
+  const start = t("START", "起點");
+  const finish = t("FINISH", "終點");
+  const star = t("+1 pt", "+1 分");
+  const trip = t("TRIP", "絆倒");
+  // The book, scenery and track never change during a race. Keeping the same
+  // elements lets React skip them when only the pawns move.
+  const scenery = useMemo(
+    () => (
+      <>
+        <PaperBook size={size} />
+        <PaperScenery title={title} backZ={size.backZ} width={size.width} />
+        <PaperTrack
+          spaces={track.specialSpaces}
+          secondCorner={track.secondCornerPosition}
+          labels={{ start, finish, star, trip }}
+        />
+      </>
+    ),
+    [size, title, track, start, finish, star, trip],
+  );
   return (
-    <>
+    <IntroContext.Provider value={intro}>
       <color attach="background" args={[PAPER.background]} />
       <hemisphereLight args={[PAPER.white, PAPER.paper, 1.6]} />
       <directionalLight
+        // A new light per quality, because a shadow map cannot be resized.
+        key={quality}
         position={[-7, 15, 10]}
         intensity={1.45}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={SHADOW_MAP[quality]}
         shadow-camera-left={-14}
         shadow-camera-right={14}
         shadow-camera-top={12}
@@ -195,19 +286,8 @@ export function PaperStage({
         <planeGeometry args={[80, 80]} />
         <shadowMaterial opacity={0.2} />
       </mesh>
-      <PaperBook size={size} />
-      <PaperScenery title={title} backZ={size.backZ} width={size.width} />
-      <PaperTrack
-        spaces={track.specialSpaces}
-        secondCorner={track.secondCornerPosition}
-        labels={{
-          start: t("START", "起點"),
-          finish: t("FINISH", "終點"),
-          star: t("+1 pt", "+1 分"),
-          trip: t("TRIP", "絆倒"),
-        }}
-      />
-      {children}
-    </>
+      {scenery}
+      <PopUp delay={PIECES_POP_DELAY}>{children}</PopUp>
+    </IntroContext.Provider>
   );
 }

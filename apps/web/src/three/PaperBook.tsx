@@ -1,7 +1,10 @@
-import { useEffect, useMemo } from "react";
+import { useContext, useEffect, useMemo, useRef } from "react";
 import { Outlines, useTexture } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { PAPER, paperGrain } from "./paperTheme";
+import { IntroContext, introElapsed } from "./PopUp";
+import { bookOpenAmount } from "./stageMotion";
 
 export interface BookSize {
   width: number;
@@ -17,6 +20,8 @@ const PAGE_THICKNESS = 0.12;
 const COVER_THICKNESS = 0.14;
 const COVER_MARGIN = 0.32;
 const BACK_LEAN = 0.16;
+/** How far the standing page is folded over the board before the book opens. */
+const SHUT_ANGLE = 1.25;
 const ILLUSTRATION_ASPECT = 1536 / 1024;
 
 /** The open book: a flat page for the board and a standing page as backdrop. */
@@ -50,6 +55,14 @@ export function PaperBook({ size }: { size: BookSize }) {
     },
     [grain, backdrop],
   );
+  const intro = useContext(IntroContext);
+  const standing = useRef<THREE.Group>(null);
+  useFrame(() => {
+    if (!standing.current) return;
+    const elapsed = introElapsed(intro, performance.now());
+    const open = elapsed === undefined ? 1 : bookOpenAmount(elapsed);
+    standing.current.rotation.x = -BACK_LEAN + (1 - open) * SHUT_ANGLE;
+  });
   return (
     <group>
       {/* Flat page and cover */}
@@ -79,7 +92,7 @@ export function PaperBook({ size }: { size: BookSize }) {
       </mesh>
 
       {/* Standing page, hinged on the fold and leaning back slightly */}
-      <group position={[0, 0, size.backZ]} rotation={[-BACK_LEAN, 0, 0]}>
+      <group ref={standing} position={[0, 0, size.backZ]}>
         <mesh position={[0, size.backHeight / 2, -0.14]} castShadow>
           <boxGeometry
             args={[

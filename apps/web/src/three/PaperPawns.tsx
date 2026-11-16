@@ -2,14 +2,21 @@ import { useState } from "react";
 import { COLORS } from "../components";
 import type { BoardPawn } from "./boardPawns";
 import { PaperConfetti } from "./PaperConfetti";
-import { PaperPawn } from "./PaperPawn";
+import { PaperPawn, type PawnAct } from "./PaperPawn";
+import { PaperSpotlight } from "./PaperSpotlight";
 import { PAPER } from "./paperTheme";
 import { travelKind, type PlaybackCue } from "./pawnMotion";
 
 const UNKNOWN_OWNER_COLOUR = PAPER.paperEdge;
+const ACT_FOR_EVENT: Record<string, PawnAct["kind"] | undefined> = {
+  FINISH: "cheer",
+  POWER_TRIGGERED: "flourish",
+};
 
-interface Burst {
-  seed: number;
+/** A one-off effect on the page, remembered so it outlives its playback frame. */
+interface PageEffect {
+  /** The event id; also seeds the confetti. */
+  id: number;
   x: number;
   z: number;
 }
@@ -24,21 +31,30 @@ export interface PaperPawnsProps {
 
 /**
  * Every pawn on the page, animated from the playback frame: movers hop or fold
- * away, and a racer crossing the line celebrates under a burst of paper scraps.
+ * away, a racer crossing the line celebrates under a burst of paper scraps, and
+ * a racer whose power goes off gets a starburst under its feet.
  */
 export function PaperPawns({ pawns, cue, still = false }: PaperPawnsProps) {
-  const finishId =
-    !still && cue?.event.type === "FINISH" ? cue.event.id : undefined;
-  const finisher =
-    finishId === undefined
+  const kind = still || !cue ? undefined : ACT_FOR_EVENT[cue.event.type];
+  const actId = kind === undefined ? undefined : cue?.event.id;
+  const actor =
+    actId === undefined
       ? undefined
       : pawns.find((pawn) => pawn.id === cue?.event.racerId);
-  const [burst, setBurst] = useState<Burst>();
-  // Remember the latest finish so its confetti outlives the playback frame.
-  if (finisher && finishId !== undefined && burst?.seed !== finishId)
-    setBurst({ seed: finishId, x: finisher.x, z: finisher.z });
-  // Forget it once motion is switched off, so it cannot replay later.
-  if (still && burst) setBurst(undefined);
+  const [effects, setEffects] = useState<
+    Partial<Record<PawnAct["kind"], PageEffect>>
+  >({});
+  // Remember the latest effect of each kind so it can finish after its
+  // playback frame ends, even if the other kind starts meanwhile.
+  if (actor && kind && actId !== undefined && effects[kind]?.id !== actId)
+    setEffects({
+      ...effects,
+      [kind]: { id: actId, x: actor.x, z: actor.z },
+    });
+  // Forget them once motion is switched off, so they cannot replay later.
+  if (still && (effects.cheer || effects.flourish)) setEffects({});
+  const confetti = still ? undefined : effects.cheer;
+  const spotlight = still ? undefined : effects.flourish;
   return (
     <>
       {pawns.map((pawn) => (
@@ -52,17 +68,25 @@ export function PaperPawns({ pawns, cue, still = false }: PaperPawnsProps) {
           tripped={pawn.tripped}
           still={still}
           tier={pawn.tier}
+          gone={pawn.gone}
           travel={travelKind(pawn.id, cue)}
-          cheer={finisher?.id === pawn.id ? finishId : undefined}
+          act={
+            actor?.id === pawn.id && kind && actId !== undefined
+              ? { kind, id: actId }
+              : undefined
+          }
         />
       ))}
-      {burst && !still && (
+      {confetti && (
         <PaperConfetti
-          key={burst.seed}
-          x={burst.x}
-          z={burst.z}
-          seed={burst.seed}
+          key={confetti.id}
+          x={confetti.x}
+          z={confetti.z}
+          seed={confetti.id}
         />
+      )}
+      {spotlight && (
+        <PaperSpotlight key={spotlight.id} x={spotlight.x} z={spotlight.z} />
       )}
     </>
   );

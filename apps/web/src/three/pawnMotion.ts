@@ -19,6 +19,8 @@ export const WARP_MS = 440;
 export const FALL_MS = 460;
 export const RISE_MS = 320;
 export const CHEER_MS = 900;
+export const FLOURISH_MS = 420;
+export const FOLD_AWAY_MS = 320;
 export const CONFETTI_MS = 1400;
 export const CONFETTI_COLOURS = 5;
 
@@ -27,14 +29,16 @@ const WARP_FOLD_SHARE = 0.42;
 const MIN_FOLD = 0.02;
 const CHEER_HEIGHT = 0.62;
 const CHEER_FIRST_JUMP = 0.6;
+const FLOURISH_HEIGHT = 0.16;
+const FLOURISH_GROW = 0.16;
 const CONFETTI_START_HEIGHT = 0.55;
 const CONFETTI_GRAVITY = 7;
 const CONFETTI_REST_HEIGHT = 0.02;
 const CONFETTI_FADE_FROM = 0.7;
 
-const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
+export const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
-function easeOutBack(t: number): number {
+export function easeOutBack(t: number): number {
   const overshoot = 1.70158;
   const shifted = t - 1;
   return (
@@ -119,6 +123,18 @@ export function warpPose(elapsedMs: number): TravelPose {
   };
 }
 
+/** An eliminated pawn folds flat into the page and is then hidden. */
+export function foldAwayPose(elapsedMs: number): {
+  fold: number;
+  done: boolean;
+} {
+  const progress = clamp01(elapsedMs / FOLD_AWAY_MS);
+  return {
+    fold: Math.max(MIN_FOLD, 1 - progress * progress),
+    done: progress >= 1,
+  };
+}
+
 /**
  * How far over the pawn is: 0 upright, 1 flat on its side. Falling bounces,
  * getting up overshoots slightly, and either can start from a half-way pose.
@@ -135,15 +151,18 @@ export function fallAmount(
   return from + (to - from) * eased;
 }
 
-export interface CheerPose {
+/** A short piece of acting on the spot: a finish cheer or a power flourish. */
+export interface ActPose {
   lift: number;
   /** Rotation about the vertical axis, in radians. */
   turn: number;
+  /** Uniform scale; 1 is the resting size. */
+  grow: number;
   done: boolean;
 }
 
 /** Crossing the line: a big spinning jump, then a smaller one. */
-export function cheerPose(elapsedMs: number): CheerPose {
+export function cheerPose(elapsedMs: number): ActPose {
   const progress = clamp01(elapsedMs / CHEER_MS);
   const first = progress < CHEER_FIRST_JUMP;
   const jump = first
@@ -153,6 +172,18 @@ export function cheerPose(elapsedMs: number): CheerPose {
   return {
     lift: height * 4 * jump * (1 - jump),
     turn: Math.PI * 2 * (first ? easeInOut(jump) : 1),
+    grow: 1,
+    done: progress >= 1,
+  };
+}
+
+/** A power going off: one small hop while the pawn swells for a moment. */
+export function flourishPose(elapsedMs: number): ActPose {
+  const progress = clamp01(elapsedMs / FLOURISH_MS);
+  return {
+    lift: FLOURISH_HEIGHT * 4 * progress * (1 - progress),
+    turn: 0,
+    grow: 1 + FLOURISH_GROW * Math.sin(Math.PI * progress),
     done: progress >= 1,
   };
 }
@@ -171,7 +202,7 @@ export interface ConfettiPiece {
 }
 
 /** Repeatable pseudo-random number in [0, 1); visuals never use Math.random. */
-function scatter(index: number, salt: number): number {
+export function scatter(index: number, salt: number): number {
   const value = Math.sin(index * 12.9898 + salt * 78.233) * 43758.5453;
   return value - Math.floor(value);
 }

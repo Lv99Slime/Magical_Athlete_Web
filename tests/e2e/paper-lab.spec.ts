@@ -28,7 +28,7 @@ test("the sample plays each pawn animation without errors", async ({
 }) => {
   // Software WebGL manages only a few frames a second, so this test owns the
   // clock: the page draws a frame only when the test steps time forward.
-  test.setTimeout(120000);
+  test.setTimeout(180000);
   await page.clock.install();
   await page.addInitScript(() => localStorage.setItem("magical-locale", "en"));
   await page.goto("/?lab=paper3d");
@@ -43,21 +43,35 @@ test("the sample plays each pawn animation without errors", async ({
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(String(error)));
   await page.clock.pauseAt(Date.now() + 1000);
-  const demos = ["Hop", "Warp", "Trip", "Trip", "Finish"];
+  const demos = [
+    "Roll",
+    "Hop",
+    "Warp",
+    "Trip",
+    "Trip",
+    "Power",
+    "Out",
+    "Finish",
+  ];
   for (const [index, name] of demos.entries()) {
     await demo.getByRole("button", { name, exact: true }).click();
     // Each step runs the timers that are due and draws one frame.
     await expect(async () => {
-      await page.clock.fastForward(150);
+      await page.clock.fastForward(300);
       await expect(demo).toHaveAttribute(
         "data-demo-played",
         String(index + 1),
-        { timeout: 250 },
+        { timeout: 150 },
       );
-    }).toPass({ timeout: 60000 });
+    }).toPass({ timeout: 60000, intervals: [50] });
   }
   await expect(demo).toHaveAttribute("data-demo-finished", "true");
+  // The sample die shows a face again once its roll has played out.
+  await expect(demo).toHaveAttribute("data-demo-face", /^[1-6]$/);
   // Let the finish celebration and its confetti play out.
+  for (let step = 0; step < 12; step++) await page.clock.fastForward(150);
+  await demo.getByRole("button", { name: "Open book", exact: true }).click();
+  await expect(demo).toHaveAttribute("data-demo-opening", "2");
   for (let step = 0; step < 12; step++) await page.clock.fastForward(150);
   await demo.getByRole("button", { name: "Reset", exact: true }).click();
   await expect(demo).toHaveAttribute("data-demo-finished", "false");

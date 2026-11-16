@@ -25,22 +25,29 @@ export interface BoardPawn {
   tier: number;
   active: boolean;
   tripped: boolean;
+  /** Eliminated: the pawn folds away where it stood and takes no spot. */
+  gone: boolean;
 }
 
 /**
- * Where every racer still on the board stands. Eliminated racers are left out,
- * finished racers rest on Finish, and racers sharing a space keep their race
- * order so they do not swap spots when someone else arrives.
+ * Where every racer stands. Finished racers rest on Finish, and racers sharing
+ * a space keep their race order so they do not swap spots when someone else
+ * arrives. Eliminated racers are still listed, marked `gone`, so the board can
+ * fold them away; they never take a standing spot from anyone else.
  */
 export function boardPawns(source: PawnSource): BoardPawn[] {
-  const standing = source.racers
-    .filter((racer) => racer.status !== "eliminated")
-    .map((racer) => ({
-      racer,
-      position: Math.min(LAST_POSITION, Math.max(0, racer.position)),
-    }));
-  return standing.map(({ racer, position }) => {
-    const sharing = standing.filter((other) => other.position === position);
+  const placed = source.racers.map((racer) => ({
+    racer,
+    gone: racer.status === "eliminated",
+    position: Math.min(LAST_POSITION, Math.max(0, racer.position)),
+  }));
+  const standing = placed.filter((pawn) => !pawn.gone);
+  return placed.map(({ racer, gone, position }) => {
+    // A leaving pawn keeps the spot it had among everyone on its space, so
+    // it folds where it stood; the others close up as if it were not there.
+    const sharing = (gone ? placed : standing).filter(
+      (other) => other.position === position,
+    );
     const rect = tileRect(position);
     const slot = pawnSlots(sharing.length, rect)[
       sharing.findIndex((other) => other.racer.id === racer.id)
@@ -57,6 +64,7 @@ export function boardPawns(source: PawnSource): BoardPawn[] {
       tier: slot.tier,
       active: source.turn?.racerId === racer.id && racer.status === "active",
       tripped: racer.tripped && racer.status === "active",
+      gone,
     };
   });
 }

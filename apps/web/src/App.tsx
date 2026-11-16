@@ -101,13 +101,22 @@ export function App() {
       return false;
     }
   });
+  const [boardSlow, setBoardSlow] = useState(false);
   const chooseBoard3d = (next: boolean) => {
+    setBoardSlow(false);
     setBoard3d(next);
     try {
       localStorage.setItem(BOARD_MODE_KEY, next ? "3d" : "2d");
     } catch {
       /* The choice still applies for this visit. */
     }
+  };
+  /** The 3D board measured itself as too slow here: show 2D and say why. */
+  const board3dTooSlow = () => {
+    // For this visit only: the saved choice stays as the player set it, so
+    // one bad stretch cannot switch 3D off for good.
+    setBoard3d(false);
+    setBoardSlow(true);
   };
   const [library, setLibrary] = useState(false);
   useEffect(() => {
@@ -486,6 +495,8 @@ export function App() {
               playback={presentation.frame}
               dice={presentation.dice}
               board3d={board3d && webgl}
+              boardSlow={boardSlow}
+              onBoard3dTooSlow={board3dTooSlow}
               fast={fast}
               act={screen === "local" ? localAction : sendOnline}
             />
@@ -894,6 +905,8 @@ export function GameScreen({
   playback,
   dice,
   board3d = false,
+  boardSlow = false,
+  onBoard3dTooSlow,
   fast = false,
 }: {
   view: PlayerView;
@@ -903,6 +916,8 @@ export function GameScreen({
   playback?: PlaybackFrame;
   dice?: DiceDisplay;
   board3d?: boolean;
+  boardSlow?: boolean;
+  onBoard3dTooSlow?: () => void;
   fast?: boolean;
 }) {
   const { t, locale } = useI18n();
@@ -1120,11 +1135,22 @@ export function GameScreen({
                   dice={dice}
                   playback={playback}
                   still={fast}
+                  onTooSlow={onBoard3dTooSlow}
                 />
               </Suspense>
             </Board3DBoundary>
           ) : (
-            <Board view={view} playback={playback} />
+            <>
+              {boardSlow && (
+                <p className="board-notice" role="status" data-board-slow>
+                  {t(
+                    "The 3D board was too slow on this device, so the 2D board is shown. You can turn the 3D board back on in the header.",
+                    "3D 棋盤在此裝置上運行過慢，已改為顯示 2D 棋盤。你可在頁首重新開啟 3D 棋盤。",
+                  )}
+                </p>
+              )}
+              <Board view={view} playback={playback} />
+            </>
           )}
           {view.error && (
             <div className="error" role="alert">

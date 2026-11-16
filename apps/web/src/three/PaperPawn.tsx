@@ -7,11 +7,19 @@ import { PAPER } from "./paperTheme";
 import {
   cheerPose,
   fallAmount,
+  flourishPose,
+  foldAwayPose,
   hopPose,
   warpPose,
   type TravelKind,
 } from "./pawnMotion";
 import { TILE_HEIGHT } from "./trackLayout3d";
+
+/** A one-off piece of acting; a new `id` plays it once. */
+export interface PawnAct {
+  kind: "cheer" | "flourish";
+  id: number;
+}
 
 export interface PawnProps {
   racerId: string;
@@ -27,8 +35,10 @@ export interface PawnProps {
   tier?: number;
   /** How the pawn reaches a new spot; gliding when not told otherwise. */
   travel?: TravelKind;
-  /** Set to a new number when this pawn crosses the line, to celebrate once. */
-  cheer?: number;
+  /** Cheer when crossing the line, flourish when a power goes off. */
+  act?: PawnAct;
+  /** Eliminated: fold flat into the page and stay hidden. */
+  gone?: boolean;
 }
 
 const BASE_RADIUS = 0.2;
@@ -121,10 +131,13 @@ interface PawnState {
   fallFrom: number;
   fallTo: number;
   fallStart: number;
-  cheer?: number;
-  cheerStart?: number;
+  actId?: number;
+  actKind?: PawnAct["kind"];
+  actStart?: number;
   /** 0 to 1 weight of the idle bob, eased so it never pops in after a hop. */
   bob: number;
+  gone: boolean;
+  goneStart?: number;
 }
 
 export function PaperPawn({
@@ -137,7 +150,8 @@ export function PaperPawn({
   still = false,
   tier = 0,
   travel = "glide",
-  cheer,
+  act,
+  gone = false,
 }: PawnProps) {
   const portrait = usePortrait(racerId);
   const root = useRef<THREE.Group>(null);
@@ -154,16 +168,17 @@ export function PaperPawn({
     fallTo: 0,
     fallStart: 0,
     bob: 0,
+    gone: false,
   });
   const invalidate = useThree((state) => state.invalidate);
   // Ask for a frame when the pose changes; needed when frames are drawn on demand.
   useEffect(() => {
     invalidate();
-  }, [x, z, tripped, still, invalidate]);
+  }, [x, z, tripped, gone, still, invalidate]);
   const pole = POLE_HEIGHT + tier * TIER_HEIGHT;
   const flagCentre =
     BASE_HEIGHT + BODY_HEIGHT + pole + FLAG_SIZE / 2 + FLAG_BORDER;
-  useFrame(({ clock, camera }, delta) => {
+  useFrame(({ camera }, delta) => {
     const group = root.current;
     if (
       !group ||
@@ -173,7 +188,9 @@ export function PaperPawn({
       !poleMesh.current
     )
       return;
-    const now = clock.elapsedTime * 1000;
+    // The page clock, not the render clock: R3F zeroes its own clock whenever
+    // the frame loop mode changes, which would strand the start times below.
+    const now = performance.now();
     const state = motion.current;
     const fallTarget = tripped ? 1 : 0;
     const snap = still || !state.ready;
@@ -234,35 +251,57 @@ export function PaperPawn({
     );
     const fall = state.fall;
 
-    // Crossing the line.
-    if (cheer !== state.cheer) {
-      state.cheer = cheer;
-      if (cheer !== undefined && !snap) state.cheerStart = now;
+    // Acting on the spot: a finish cheer or a power flourish.
+    if (act?.id !== state.actId) {
+      state.actId = act?.id;
+      if (act && !snap) {
+        state.actKind = act.kind;
+        state.actStart = now;
+      }
     }
-    if (still) state.cheerStart = undefined;
+    if (still) state.actStart = undefined;
     let turn = 0;
-    if (state.cheerStart !== undefined) {
-      const pose = cheerPose(now - state.cheerStart);
+    let grow = 1;
+    if (state.actStart !== undefined) {
+      const elapsed = now - state.actStart;
+      const pose =
+        state.actKind === "cheer" ? cheerPose(elapsed) : flourishPose(elapsed);
       lift += pose.lift;
       turn = pose.turn;
-      if (pose.done) state.cheerStart = undefined;
+      grow = pose.grow;
+      if (pose.done) state.actStart = undefined;
+    }
+    // Eliminated: fold flat into the page, then stay hidden.
+    if (gone !== state.gone) {
+      state.gone = gone;
+      state.goneStart = gone && !snap ? now : undefined;
+    }
+    if (gone) {
+      const leaving =
+        still || state.goneStart === undefined
+          ? { fold: 1, done: true }
+          : foldAwayPose(now - state.goneStart);
+      fold *= leaving.fold;
+      group.visible = !leaving.done;
+    } else {
+      group.visible = true;
     }
     state.ready = true;
 
     const resting =
-      !state.travel && state.cheerStart === undefined && fallTarget === 0;
+      !state.travel && state.actStart === undefined && fallTarget === 0;
     const bobGoal = active && !still && resting ? 1 : 0;
     state.bob = still
       ? 0
       : state.bob +
         (bobGoal - state.bob) *
           (1 - Math.exp(-Math.min(delta, 0.1) * BOB_EASE_RATE));
-    lift += Math.abs(Math.sin(clock.elapsedTime * 3.2)) * IDLE_BOB * state.bob;
+    lift += Math.abs(Math.sin((now / 1000) * 3.2)) * IDLE_BOB * state.bob;
 
-    const spread = 1 + (1 - squash) * 0.5;
+    const spread = (1 + (1 - squash) * 0.5) * grow;
     figure.current.position.y = lift;
     figure.current.rotation.y = turn;
-    figure.current.scale.set(spread, squash * fold, spread);
+    figure.current.scale.set(spread, squash * fold * grow, spread);
     body.current.position.set(
       BODY_FALLEN.x * fall,
       BODY_FALLEN.y * fall,
